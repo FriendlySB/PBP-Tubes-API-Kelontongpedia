@@ -15,6 +15,14 @@ func main() {
 
 	//List End Points
 	/*
+		//Untuk database
+		//Usertype
+			0 = admin
+			1 = pembeli
+			2 = toko
+		//ban
+			0 = not banned
+			1 = banned
 		//Dibagi berdasarkan siapa yang bisa mengaksesnya
 		//Umum
 		1. Login
