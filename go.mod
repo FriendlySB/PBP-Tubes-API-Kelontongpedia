@@ -1,4 +1,4 @@
-module week6
+module PBP-Tubes-API-Tokopedia
 
 go 1.19
 

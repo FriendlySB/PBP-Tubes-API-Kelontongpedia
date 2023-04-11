@@ -1,9 +1,9 @@
 package controller
 
 import (
+	"PBP-Tubes-API-Tokopedia/model"
 	"encoding/json"
 	"net/http"
-	"week6/model"
 )
 
 func sendErrorResponse(w http.ResponseWriter, message string) {

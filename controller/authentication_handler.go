@@ -1,10 +1,10 @@
 package controller
 
 import (
+	"PBP-Tubes-API-Tokopedia/model"
 	"fmt"
 	"net/http"
 	"time"
-	"week6/model"
 
 	"github.com/dgrijalva/jwt-go"
 )

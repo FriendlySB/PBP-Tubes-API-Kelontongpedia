@@ -1,11 +1,11 @@
 package controller
 
 import (
+	"PBP-Tubes-API-Tokopedia/model"
 	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
-	"week6/model"
 
 	"github.com/gorilla/mux"
 )
