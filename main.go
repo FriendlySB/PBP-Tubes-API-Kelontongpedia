@@ -20,6 +20,7 @@ func main() {
 	})
 
 	handler := corsHandler.Handler(router)
+s
 
 	http.Handle("/", router)
 	fmt.Println("Connected to port 8492")
