@@ -3,6 +3,8 @@ package controller
 import (
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/mux"
 )
 
 func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
@@ -14,7 +16,8 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
-	shopid := r.Form.Get("shop_id")
+	vars := mux.Vars(r)
+	shopid := vars["shop_id"]
 	shopname := r.Form.Get("shop_name")
 	shopreputation := r.Form.Get("shop_reputation")
 	shopcategory := r.Form.Get("shop_category")
@@ -82,7 +85,8 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
-	transId := r.Form.Get("ID")
+	vars := mux.Vars(r)
+	transId := vars["transaction_id"]
 	progress := r.Form.Get("progress")
 	sqlStatement := `Update transaction
 	SET progress = ?
