@@ -66,6 +66,8 @@ func main() {
 	router.HandleFunc("/updateTransaction/{transaction_id}", controller.UpdateTransaction).Methods("PUT")
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
 
+	router.HandleFunc("/profile", controller.GetUserProfile).Methods("GET")
+
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8080"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
