@@ -56,6 +56,12 @@ func main() {
 	*/
 	router.HandleFunc("/cart/{user_id}", controller.GetCart).Methods("GET")
 	router.HandleFunc("/cart/{user_id}", controller.InsertItemToCart).Methods("POST")
+
+	router.HandleFunc("/item", controller.GetItem).Methods("GET")
+	router.HandleFunc("/item", controller.InsertItem).Methods("POST")
+	router.HandleFunc("/item", controller.UpdateItem).Methods("PUT")
+	router.HandleFunc("/item/{item_id}", controller.DeleteItem).Methods("Delete")
+
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8080"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
