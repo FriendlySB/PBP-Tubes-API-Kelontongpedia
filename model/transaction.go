@@ -11,3 +11,8 @@ type Transaction struct {
 	PaymentType       string              `json:"paymenttype"`
 	TransactionDetail []TransactionDetail `json:"transactiondetail"`
 }
+type UpdateTransaction struct {
+	TransactionID int `json:"transactionid"`
+	ItemID        int `json:"itemid"`
+	Quantity      int `json:"quantity"`
+}
