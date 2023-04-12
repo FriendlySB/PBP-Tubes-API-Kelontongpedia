@@ -49,6 +49,7 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 				response.Status = 400
 				response.Message = "Error"
 			}
+			w.Header().Set("Content=Type", "application/json")
 			json.NewEncoder(w).Encode(response)
 		}
 	}
