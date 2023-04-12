@@ -91,8 +91,8 @@ func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 		response.Message = "Gagal Insert Cart"
 	} else {
 		_, errQuery := db.Exec("INSERT INTO cart_detail(cartId,itemId,quantity)values(?,?,?)",
-			itemId,
 			cart.CartID,
+			itemId,
 			quantity,
 		)
 		cart.ItemID = itemId
