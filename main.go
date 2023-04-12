@@ -1,6 +1,7 @@
 package main
 
 import (
+	"PBP-Tubes-API-Tokopedia/controller"
 	"fmt"
 	"log"
 	"net/http"
@@ -53,7 +54,7 @@ func main() {
 		2. BanToko
 		3. GetAllUser
 	*/
-
+	router.HandleFunc("/cart", controller.GetCart).Methods("GET")
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8492"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
