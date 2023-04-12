@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -36,44 +37,44 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 		query += "shopreputation = " + shopreputation
 	}
 	if shopcategory != "" {
-		if strings.Contains(query, "shopreputation") {
+		if strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
 		query += "shopcategory = " + shopcategory
 	}
 	if shopadress != "" {
-		if strings.Contains(query, "shopcategory") {
+		if strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
 		query += "shopadress = " + shopadress
 	}
 	if shoptelephone != "" {
-		if strings.Contains(query, "shoptelephone") {
+		if strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
 		query += "shoptelephone = " + shoptelephone
 	}
 	if shopemail != "" {
-		if strings.Contains(query, "shopemail") {
+		if strings.Contains(query, "shopemail") || strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
 		query += "shopemail = " + shopemail
 	}
 	if shopstatus != "" {
-		if strings.Contains(query, "shopstatus") {
+		if strings.Contains(query, "shopstatus") || strings.Contains(query, "shopemail") || strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
 		query += "shopstatus = " + shopstatus
 	}
 	query += " WHERE shopid = " + shopid
-	_, errQuery := db.Exec(query)
-
-	if errQuery != nil {
-		sendErrorResponse(w, "Failed to update transaction")
-		return
-	} else {
-		sendSuccessResponse(w, "Progress updated", nil)
-	}
+	// _, errQuery := db.Exec(query)
+	fmt.Println(query)
+	// if errQuery != nil {
+	// 	sendErrorResponse(w, "Failed to update transaction")
+	// 	return
+	// } else {
+	// 	sendSuccessResponse(w, "Progress updated", nil)
+	// }
 }
 
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
