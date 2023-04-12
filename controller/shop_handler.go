@@ -1,7 +1,9 @@
 package controller
 
 import (
+	"PBP-Tubes-API-Tokopedia/model"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 
@@ -101,4 +103,64 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	} else {
 		sendSuccessResponse(w, "Progress updated", nil)
 	}
+}
+
+func GetShopProfile(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	shopid := r.URL.Query().Get("shop_id")
+	shopname := r.URL.Query().Get("shop_name")
+	shopcategory := r.URL.Query().Get("shop_category")
+	shopprice := r.URL.Query().Get("shop_price")
+
+	query := "SELECT * FROM shop "
+
+	if shopid != "" {
+		query += "WHERE shopid = " + shopid + " "
+	}
+	if shopname != "" {
+		if strings.Contains(query, "WHERE") {
+			query += "AND"
+		} else {
+			query += "WHERE"
+		}
+		query += " shopName LIKE '%" + shopname + "%' "
+	}
+	if shopcategory != "" {
+		if strings.Contains(query, "WHERE") {
+			query += "AND"
+		} else {
+			query += "WHERE"
+		}
+		query += " shopCategory = '" + shopcategory + "' "
+	}
+	if shopprice != "" {
+		if strings.Contains(query, "WHERE") {
+			query += "AND"
+		} else {
+			query += "WHERE"
+		}
+		query += " shopPrice <= '" + shopprice + "'"
+	}
+	fmt.Println(query)
+	rows, err := db.Query(query)
+
+	if err != nil {
+		log.Println(err)
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
+	var shop model.Shop
+	var shopList []model.Shop
+	for rows.Next() {
+		if err := rows.Scan(&shop.ID, &shop.ID, &shop.Name, &shop.Reputation, &shop.Category, &shop.Address, &shop.TelephoneNo, &shop.Email); err != nil {
+			log.Println(err)
+			sendErrorResponse(w, "Something went wrong, please try again")
+			return
+		} else {
+			shopList = append(shopList, shop)
+		}
+	}
+	sendSuccessResponse(w, "Success", shopList)
 }
