@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -64,6 +63,37 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 		query += "shopstatus = " + shopstatus
 	}
 	query += " WHERE shopid = " + shopid
-	//_, errQuery := db.Exec(query)
-	fmt.Println(query)
+	_, errQuery := db.Exec(query)
+
+	if errQuery != nil {
+		sendErrorResponse(w, "Failed to update transaction")
+		return
+	} else {
+		sendSuccessResponse(w, "Progress updated", nil)
+	}
+}
+
+func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	err := r.ParseForm()
+	if err != nil {
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
+	transId := r.Form.Get("ID")
+	progress := r.Form.Get("progress")
+	sqlStatement := `Update transaction
+	SET progress = ?
+	where ID =?`
+
+	_, errQuery := db.Exec(sqlStatement, progress, transId)
+
+	if errQuery != nil {
+		sendErrorResponse(w, "Failed to update transaction")
+		return
+	} else {
+		sendSuccessResponse(w, "Progress updated", nil)
+	}
 }
