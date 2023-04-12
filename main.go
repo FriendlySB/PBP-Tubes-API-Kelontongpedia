@@ -54,9 +54,9 @@ func main() {
 		2. BanToko
 		3. GetAllUser
 	*/
-	router.HandleFunc("/cart", controller.GetCart).Methods("GET")
+	router.HandleFunc("/cart/{user_id}", controller.GetCart).Methods("GET")
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"localhost:8492"},
+		AllowedOrigins:   []string{"localhost:8080"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
 		AllowCredentials: true,
 	})
@@ -64,7 +64,7 @@ func main() {
 	handler := corsHandler.Handler(router)
 
 	http.Handle("/", router)
-	fmt.Println("Connected to port 8492")
-	log.Println("Connected to port 8492")
-	log.Fatal(http.ListenAndServe(":8492", handler))
+	fmt.Println("Connected to port 8080")
+	log.Println("Connected to port 8080")
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }
