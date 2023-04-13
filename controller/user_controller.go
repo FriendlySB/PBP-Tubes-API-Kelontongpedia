@@ -228,3 +228,32 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+func ReviewItem(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	currentID := getUserIdFromCookie(r)
+
+	if currentID == -1 {
+		sendUnauthorizedResponse(w)
+	} else {
+		err := r.ParseForm()
+		if err != nil {
+			sendErrorResponse(w, "Error while parsing form")
+			return
+		}
+		itemID := r.Form.Get("itemID")
+		review := r.Form.Get("review")
+		rating := r.Form.Get("rating")
+
+		_, errQuery := db.Exec("INSERT INTO review(itemID, userID, rating, review) VALUES(?,?,?,?)", itemID, currentID, rating, review)
+
+		if errQuery == nil {
+			response := model.GenericResponse{Status: 200, Message: "Success"}
+			json.NewEncoder(w).Encode(response)
+		} else {
+			response := model.GenericResponse{Status: 400, Message: "Error"}
+			json.NewEncoder(w).Encode(response)
+		}
+	}
+}
