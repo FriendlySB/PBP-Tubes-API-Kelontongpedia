@@ -107,9 +107,7 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vars := mux.Vars(r)
-
-	itemid := vars["item_id"]
+	itemid := r.Form.Get("item_id")
 	itemname := r.Form.Get("item_name")
 	itemdesc := r.Form.Get("item_desc")
 	itemcategory := r.Form.Get("item_category")
