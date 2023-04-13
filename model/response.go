@@ -7,7 +7,7 @@ type ErrorResponse struct {
 type GenericResponse struct {
 	Status  int         `json:"status"`
 	Message string      `json:"message"`
-	Data    interface{} `json:"data"`
+	Data    interface{} `json:"data,omitempty"`
 }
 type CartResponse struct {
 	Status  int    `json:"status"`
@@ -15,7 +15,7 @@ type CartResponse struct {
 	Data    Cart   `json:"cart"`
 }
 type ReviewResponse struct {
-	Status  int     `json:"status"`
-	Message string  `json:"message"`
-	Data    []Review  `json:"review"`
+	Status  int      `json:"status"`
+	Message string   `json:"message"`
+	Data    []Review `json:"review"`
 }
