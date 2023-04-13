@@ -67,6 +67,9 @@ func main() {
 	router.HandleFunc("/updateTransaction/{transaction_id}", controller.UpdateTransaction).Methods("PUT")
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
 
+	router.HandleFunc("/profile", controller.GetUserProfile).Methods("GET")
+	router.HandleFunc("/profile", controller.UpdateUserProfile).Methods("PUT")
+
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8080"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
@@ -78,5 +81,5 @@ func main() {
 	http.Handle("/", router)
 	fmt.Println("Connected to port 8080")
 	log.Println("Connected to port 8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe(":8181", handler))
 }

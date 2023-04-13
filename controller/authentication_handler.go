@@ -2,6 +2,7 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -82,4 +83,26 @@ func validateTokenFromCookies(r *http.Request) (bool, int, string, int) {
 		}
 	}
 	return false, -1, "", -1
+}
+
+func sendUnauthorizedResponse(w http.ResponseWriter) {
+	var response model.ErrorResponse
+	response.Status = 401
+	response.Message = "Unauthorized Access"
+	w.Header().Set("Content=Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func getUserIdFromCookie(r *http.Request) int {
+	if cookie, err := r.Cookie(tokenName); err == nil {
+		jwtToken := cookie.Value
+		accessClaims := &model.Claim{}
+		parsedToken, err := jwt.ParseWithClaims(jwtToken, accessClaims, func(accessToken *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+		if err == nil && parsedToken.Valid {
+			return accessClaims.ID
+		}
+	}
+	return -1
 }
