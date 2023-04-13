@@ -54,6 +54,10 @@ func main() {
 		2. BanToko
 		3. GetAllUser
 	*/
+
+	router.HandleFunc("/login", controller.Login).Methods("POST")
+	router.HandleFunc("/logout", controller.Logout).Methods("POST")
+
 	router.HandleFunc("/cart/{user_id}", controller.GetCart).Methods("GET")
 	router.HandleFunc("/cart/{user_id}", controller.InsertItemToCart).Methods("POST")
 	router.HandleFunc("/cart/{user_id}", controller.UpdateCart).Methods("PUT")
