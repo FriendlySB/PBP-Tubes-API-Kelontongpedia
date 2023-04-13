@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -18,16 +17,17 @@ func BanUser(w http.ResponseWriter, r *http.Request) {
 	}
 	vars := mux.Vars(r)
 	userId := vars["user_id"]
-	sqlStatement := "UPDATE users SET banstatus = 1 WHERE userid =?"
+	sqlStatement := `Update users
+	SET banstatus = 1
+	where ID =?`
 
 	_, errQuery := db.Exec(sqlStatement, userId)
 
 	if errQuery != nil {
-		log.Println(errQuery)
 		sendErrorResponse(w, "Failed to ban user")
 		return
 	} else {
-		sendSuccessResponse(w, "User banned", nil)
+		sendSuccessResponse(w, "user banned", nil)
 	}
 }
 
@@ -42,15 +42,16 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 	}
 	vars := mux.Vars(r)
 	userId := vars["shop_id"]
-	sqlStatement := "UPDATE shop SET shopstatus = 1 WHERE shopid =?"
+	sqlStatement := `Update shop
+	SET shopstatus = 1
+	where ID =?`
 
 	_, errQuery := db.Exec(sqlStatement, userId)
 
 	if errQuery != nil {
-		log.Println(errQuery)
 		sendErrorResponse(w, "Failed to ban shop")
 		return
 	} else {
-		sendSuccessResponse(w, "Shop banned", nil)
+		sendSuccessResponse(w, "shop banned", nil)
 	}
 }
