@@ -80,7 +80,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		email := r.Form.Get("email")
 		address := r.Form.Get("address")
 		telpNo := r.Form.Get("telpNo")
-		
+
 		_, errQuery := db.Exec("UPDATE users SET name=?, email=?, address=?, telpNo=? WHERE userid=?", name, email, address, telpNo, currentID)
 
 		var response model.GenericResponse
