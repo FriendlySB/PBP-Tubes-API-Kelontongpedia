@@ -54,6 +54,10 @@ func main() {
 		2. BanToko
 		3. GetAllUser
 	*/
+
+	router.HandleFunc("/login", controller.Login).Methods("POST")
+	router.HandleFunc("/logout", controller.Logout).Methods("POST")
+
 	router.HandleFunc("/cart/{user_id}", controller.GetCart).Methods("GET")
 	router.HandleFunc("/cart/{user_id}", controller.InsertItemToCart).Methods("POST")
 	router.HandleFunc("/cart/{user_id}", controller.UpdateCart).Methods("PUT")
@@ -63,7 +67,8 @@ func main() {
 	router.HandleFunc("/item", controller.InsertItem).Methods("POST")
 	router.HandleFunc("/item", controller.UpdateItem).Methods("PUT")
 	router.HandleFunc("/item/{item_id}", controller.DeleteItem).Methods("Delete")
-	router.HandleFunc("/shop", controller.GetShopProfile).Methods("POST")
+
+	router.HandleFunc("/shop", controller.GetShopProfile).Methods("GET")
 	router.HandleFunc("/updateTransaction/{transaction_id}", controller.UpdateTransaction).Methods("PUT")
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
 
@@ -84,5 +89,5 @@ func main() {
 	http.Handle("/", router)
 	fmt.Println("Connected to port 8080")
 	log.Println("Connected to port 8080")
-	log.Fatal(http.ListenAndServe(":8181", handler))
+	log.Fatal(http.ListenAndServe(":8080", handler))
 }
