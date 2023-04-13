@@ -63,7 +63,5 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	if currentID == -1 {
 		sendUnauthorizedResponse(w)
-	} else {
-
 	}
 }
