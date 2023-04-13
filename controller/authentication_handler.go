@@ -92,3 +92,17 @@ func sendUnauthorizedResponse(w http.ResponseWriter) {
 	w.Header().Set("Content=Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
+
+func getUserIdFromCookie(r *http.Request) int {
+	if cookie, err := r.Cookie(tokenName); err == nil {
+		jwtToken := cookie.Value
+		accessClaims := &model.Claim{}
+		parsedToken, err := jwt.ParseWithClaims(jwtToken, accessClaims, func(accessToken *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+		if err == nil && parsedToken.Valid {
+			return accessClaims.ID
+		}
+	}
+	return -1
+}

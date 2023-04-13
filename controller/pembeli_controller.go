@@ -5,9 +5,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"strconv"
-
-	"github.com/dgrijalva/jwt-go"
 )
 
 // "encoding/json"
@@ -19,52 +16,54 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 
-	currentID := getUserIdFromCookie(r)
+	query := "SELECT userid, name, email, address, telpNo FROM users"
+	name := r.URL.Query()["name"]
+	userid := r.URL.Query()["userid"]
+	if name != nil {
+		query += " WHERE name='"+ name[0] + "'"
+	}
+	if userid != nil {
+		query += " WHERE userid="+ userid[0]
+	}
 
-	if currentID == -1 {
-		sendUnauthorizedResponse(w)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Fatal(err)
 	} else {
-		query := "SELECT userid, name, email, address, telpNo FROM users WHERE userid =" + strconv.Itoa(currentID)
-		rows, err := db.Query(query)
-
-		if err != nil {
-			log.Fatal(err)
-		} else {
-			var user model.User
-			var users []model.User
-			for rows.Next() {
-				if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
-					sendErrorResponse(w, "Error while scanning rows")
-					return
-				} else {
-					users = append(users, user)
-				}
-			}
-			var response model.GenericResponse
-			if err == nil {
-				response.Status = 200
-				response.Message = "Success"
-				response.Data = users
+		var user model.User
+		var users []model.User
+		for rows.Next() {
+			if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
+				sendErrorResponse(w, "Error while scanning rows")
+				return
 			} else {
-				response.Status = 400
-				response.Message = "Error"
+				users = append(users, user)
 			}
-			w.Header().Set("Content=Type", "application/json")
+		}
+		var response model.GenericResponse
+		w.Header().Set("Content=Type", "application/json")
+		if err == nil {
+			response.Status = 200
+			response.Message = "Success"
+			response.Data = users
+			json.NewEncoder(w).Encode(response)
+		} else {
+			response.Status = 400
+			response.Message = "Error"
 			json.NewEncoder(w).Encode(response)
 		}
 	}
 }
 
-func getUserIdFromCookie(r *http.Request) int {
-	if cookie, err := r.Cookie(tokenName); err == nil {
-		jwtToken := cookie.Value
-		accessClaims := &model.Claim{}
-		parsedToken, err := jwt.ParseWithClaims(jwtToken, accessClaims, func(accessToken *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
-		})
-		if err == nil && parsedToken.Valid {
-			return accessClaims.ID
-		}
+func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	currentID := getUserIdFromCookie(r)
+
+	if currentID == -1 {
+		sendUnauthorizedResponse(w)
+	} else {
+
 	}
-	return -1
 }

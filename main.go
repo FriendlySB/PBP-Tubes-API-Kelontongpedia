@@ -68,6 +68,7 @@ func main() {
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
 
 	router.HandleFunc("/profile", controller.GetUserProfile).Methods("GET")
+	router.HandleFunc("/profile", controller.UpdateUserProfile).Methods("PUT")
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8080"},
