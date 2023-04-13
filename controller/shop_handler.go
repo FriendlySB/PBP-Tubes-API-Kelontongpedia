@@ -309,7 +309,7 @@ func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 			sendErrorResponse(w, "Something went wrong, please try again")
 			return
 		} else {
-			if shop.ShopBanStatus == false {
+			if !shop.ShopBanStatus {
 				shopList = append(shopList, shop)
 			}
 

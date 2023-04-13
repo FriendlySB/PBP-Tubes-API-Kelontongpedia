@@ -58,10 +58,10 @@ func main() {
 	router.HandleFunc("/login", controller.Login).Methods("POST")
 	router.HandleFunc("/logout", controller.Logout).Methods("POST")
 
-	router.HandleFunc("/cart/{user_id}", controller.GetCart).Methods("GET")
-	router.HandleFunc("/cart/{user_id}", controller.InsertItemToCart).Methods("POST")
-	router.HandleFunc("/cart/{user_id}", controller.UpdateCart).Methods("PUT")
-	router.HandleFunc("/cart/{user_id}", controller.DeleteItemFromCart).Methods("DELETE")
+	router.HandleFunc("/cart", controller.GetCart).Methods("GET")
+	router.HandleFunc("/cart", controller.InsertItemToCart).Methods("POST")
+	router.HandleFunc("/cart", controller.UpdateCart).Methods("PUT")
+	router.HandleFunc("/cart/{item_id}", controller.DeleteItemFromCart).Methods("DELETE")
 
 	router.HandleFunc("/item", controller.GetItem).Methods("GET")
 	router.HandleFunc("/item", controller.InsertItem).Methods("POST")
