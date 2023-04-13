@@ -16,72 +16,33 @@ import (
 func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
+	//baca userID dari cookie
+	_, UserID, _, _ := validateTokenFromCookies(r)
 
-	//user jika blm ada cookie
-	vars := mux.Vars(r)
-	UserID := vars["user_id"]
-
-	//user jika sudah ada cookie
-	//_, id, _, _ := validateTokenFromCookies(r)
-	//Read From Query Param
+	//baca dari Query Param
 	transactionId := r.URL.Query()["transactionId"]
-	address := r.URL.Query()["address"]
-	date := r.URL.Query()["date"]
-	delivery := r.URL.Query()["delivery"]
-	progress := r.URL.Query()["progress"]
-	paymentType := r.URL.Query()["paymentType"]
+	shopId := r.URL.Query()["shopId"]
 
 	query := "SELECT a.transactionId,a.userId,a.address,a.date,a.delivery,a.progress,a.paymentType,b.transactionId,b.itemId,b.quantity FROM `transaction` a INNER JOIN transaction_detail b ON a.transactionId = b.transactionId"
 	if transactionId != nil {
-		query += " WHERE transactionId='" + transactionId[0] + "'"
+		query += " WHERE a.transactionId='" + transactionId[0] + "'"
 	}
-	if address != nil {
+	if UserID != 0 {
 		if strings.Contains(query, "WHERE") {
 			query += "AND"
 		} else {
 			query += "WHERE"
 		}
-		fmt.Println(address[0])
-		query += " address LIKE '%" + address[0] + "%' "
+		query += " a.userId='" + strconv.Itoa(UserID) + "'"
 	}
-	if date != nil {
+	if shopId != nil {
 		if strings.Contains(query, "WHERE") {
 			query += "AND"
 		} else {
 			query += "WHERE"
 		}
-		fmt.Println(date[0])
-		query += " date >= '" + date[0] + "' "
+		query += " b.itemId IN (SELECT itemId FROM item where shopId='" + shopId[0] + "')"
 	}
-	if delivery != nil {
-		if strings.Contains(query, "WHERE") {
-			query += "AND"
-		} else {
-			query += "WHERE"
-		}
-		fmt.Println(address[0])
-		query += " delivery ='" + delivery[0] + "' "
-	}
-	if progress != nil {
-		if strings.Contains(query, "WHERE") {
-			query += "AND"
-		} else {
-			query += "WHERE"
-		}
-		fmt.Println(progress[0])
-		query += " progress='" + progress[0] + "' "
-	}
-	if paymentType != nil {
-		if strings.Contains(query, "WHERE") {
-			query += "AND"
-		} else {
-			query += "WHERE"
-		}
-		fmt.Println(paymentType[0])
-		query += " paymentType='" + paymentType[0] + "' "
-	}
-	query += " WHERE userId = " + UserID
-	fmt.Print(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Println(err)

@@ -61,5 +61,57 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 
 	if currentID == -1 {
 		sendUnauthorizedResponse(w)
+	} else {
+		err := r.ParseForm()
+		if err != nil {
+			sendErrorResponse(w, "Error while parsing form")
+			return
+		}
+		itemId := r.Form.Get("itemId")
+		rating := r.Form.Get("rating")
+		review := r.Form.Get("review")
+
+		var check bool
+		query := "SELECT COUNT(*) "
+		query += "FROM users u "
+		query += "INNER JOIN transaction t ON t.userId=u.userid "
+		query += "INNER JOIN transaction_detail td ON td.transactionId=t.transactionId "
+		query += "INNER JOIN item i ON i.itemId=td.itemId "
+		query += "WHERE u.userid=? AND i.itemId=? AND t.progress='Done'"
+		row := db.QueryRow(query, currentID, itemId)
+		err = row.Scan(&check)
+		if err != nil {
+			sendErrorResponse(w, "Error while checking purchase history")
+			return
+		}
+
+		if !check {
+			sendErrorResponse(w, "You haven't bought this item")
+			return
+		}
+
+		_, errQuery := db.Exec("INSERT INTO review(itemID, userID, rating, review) VALUES(?,?,?,?)", itemId, currentID, rating, review)
+		
+		if errQuery == nil {
+			rows, err := db.Query("SELECT reviewId, userId, review_date, rating, review FROM review WHERE reviewId = LAST_INSERT_ID()")
+			if err != nil {
+				sendErrorResponse(w, "Error while fetching updated data")
+				return
+			}
+			defer rows.Close()
+
+			var review model.Review
+			for rows.Next() {
+				if err := rows.Scan(&review.ID, &review.UserId, &review.ReviewDate, &review.Rating, &review.Review); err != nil {
+					sendErrorResponse(w, "Error while scanning rows")
+					return
+				}
+			}
+			response := model.GenericResponse{Status: 200, Message: "Success", Data: review}
+			json.NewEncoder(w).Encode(response)
+		} else {
+			response := model.GenericResponse{Status: 400, Message: "Error"}
+			json.NewEncoder(w).Encode(response)
+		}
 	}
 }

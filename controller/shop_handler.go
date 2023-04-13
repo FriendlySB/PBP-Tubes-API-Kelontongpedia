@@ -24,13 +24,13 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 	shopname := r.Form.Get("shop_name")
 	shopreputation := r.Form.Get("shop_reputation")
 	shopcategory := r.Form.Get("shop_category")
-	shopadress := r.Form.Get("shop_adress")
+	shopaddress := r.Form.Get("shop_address")
 	shoptelephone := r.Form.Get("shop_telephone")
 	shopemail := r.Form.Get("shop_email")
 	shopstatus := r.Form.Get("shop_status")
 	query := "UPDATE shop SET "
 	if shopname != "" {
-		query += "shopname = " + shopname
+		query += "shopname = '" + shopname + "'"
 	}
 	if shopreputation != "" {
 		if strings.Contains(query, "shopname") {
@@ -42,25 +42,25 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 		if strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
-		query += "shopcategory = " + shopcategory
+		query += "shopcategory = '" + shopcategory + "'"
 	}
-	if shopadress != "" {
+	if shopaddress != "" {
 		if strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
-		query += "shopadress = " + shopadress
+		query += "shopaddress = '" + shopaddress + "'"
 	}
 	if shoptelephone != "" {
 		if strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
-		query += "shoptelephone = " + shoptelephone
+		query += "shoptelephone = '" + shoptelephone + "'"
 	}
 	if shopemail != "" {
 		if strings.Contains(query, "shopemail") || strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
 			query += ", "
 		}
-		query += "shopemail = " + shopemail
+		query += "shopemail = '" + shopemail + "'"
 	}
 	if shopstatus != "" {
 		if strings.Contains(query, "shopstatus") || strings.Contains(query, "shopemail") || strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
@@ -69,28 +69,40 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 		query += "shopstatus = " + shopstatus
 	}
 	query += " WHERE shopid = " + shopid
-	// _, errQuery := db.Exec(query)
+	_, errQuery := db.Exec(query)
 	fmt.Println(query)
-	// if errQuery != nil {
-	// 	sendErrorResponse(w, "Failed to update transaction")
-	// 	return
-	// } else {
-	// 	sendSuccessResponse(w, "Progress updated", nil)
-	// }
+	if errQuery != nil {
+		log.Println(errQuery)
+		sendErrorResponse(w, "Failed to update shop profile")
+		return
+	} else {
+		sendSuccessResponse(w, "Shop profile updated", nil)
+	}
 }
 
 func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 
+	shopid := r.URL.Query().Get("shop_id")
 	shopname := r.URL.Query().Get("shop_name")
 	shopcategory := r.URL.Query().Get("shop_category")
 	shopreputation := r.URL.Query().Get("shop_reputation")
 
+	fmt.Println(shopid, shopname, shopcategory, shopreputation)
+
 	query := "SELECT * FROM shop "
 
+	if shopid != "" {
+		query += "WHERE shopid = " + shopid + " "
+	}
 	if shopname != "" {
-		query += "WHERE shopName LIKE '%" + shopname + "%' "
+		if strings.Contains(query, "WHERE") {
+			query += "AND"
+		} else {
+			query += "WHERE"
+		}
+		query += " shopName LIKE '%" + shopname + "%' "
 	}
 	if shopcategory != "" {
 		if strings.Contains(query, "WHERE") {
@@ -142,13 +154,13 @@ func RegisterShop(w http.ResponseWriter, r *http.Request) {
 	}
 	shopname := r.Form.Get("shop_name")
 	shopcategory := r.Form.Get("shop_category")
-	shopadress := r.Form.Get("shop_address")
+	shopaddress := r.Form.Get("shop_address")
 	shoptelephone := r.Form.Get("shop_telephone")
 	shopemail := r.Form.Get("shop_email")
 
 	query := "INSERT INTO shop (shopName,shopReputation,shopCategory,shopAddress,shopTelephone,shopEmail,shopStatus) "
 	query += "VALUES (?,?,?,?,?,?,?)"
-	res, errQuery := db.Exec(query, shopname, 0, shopcategory, shopadress, shoptelephone, shopemail, 0)
+	res, errQuery := db.Exec(query, shopname, 0, shopcategory, shopaddress, shoptelephone, shopemail, 0)
 	if errQuery != nil {
 		log.Println(errQuery)
 		sendErrorResponse(w, "Failed to register shop")
