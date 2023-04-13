@@ -106,55 +106,65 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
+
 	itemid := r.Form.Get("item_id")
 	itemname := r.Form.Get("item_name")
 	itemdesc := r.Form.Get("item_desc")
 	itemcategory := r.Form.Get("item_category")
 	itemprice := r.Form.Get("item_price")
 	itemstock := r.Form.Get("item_stock")
+
 	query := "UPDATE item SET "
 	if itemname != "" {
-		query += "itemname = " + itemname
+		query += "itemname = '" + itemname + "'"
 	}
 	if itemdesc != "" {
-		if strings.Contains(query, "itemname") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
-		query += "itemdesc = " + itemdesc
+		query += "itemdesc = '" + itemdesc + "'"
 	}
 	if itemcategory != "" {
-		if strings.Contains(query, "itemdesc") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
-		query += "itemcategory = " + itemcategory
+		query += "itemcategory = '" + itemcategory + "'"
 	}
 	if itemprice != "" {
-		if strings.Contains(query, "itemcategory") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
 		query += "itemprice = " + itemprice
 	}
 	if itemstock != "" {
-		if strings.Contains(query, "itemprice") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
 		query += "itemstock = " + itemstock
 	}
 	query += " WHERE itemid = " + itemid
-	//_, errQuery := db.Exec(query)
-	fmt.Println(query)
 
+	_, errQuery := db.Exec(query)
+
+	if errQuery != nil {
+		log.Println(errQuery)
+		sendErrorResponse(w, "Failed to update item")
+		return
+	} else {
+		sendSuccessResponse(w, "Successfully updated item", nil)
+	}
 }
 func DeleteItem(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 
 	vars := mux.Vars(r)
-	itemid := vars["user_id"]
+	itemid := vars["item_id"]
 
-	query := "DELETE FROM item WHERE itemid =" + itemid
+	query := "DELETE FROM item WHERE itemid = " + itemid
 	result, errQuery := db.Exec(query)
 	if errQuery != nil {
+		log.Println(errQuery)
 		sendErrorResponse(w, "Failed to delete item")
 		return
 	} else {
