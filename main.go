@@ -75,9 +75,9 @@ func main() {
 
 	router.HandleFunc("/profile", controller.GetUserProfile).Methods("GET")
 	router.HandleFunc("/updateprofile", controller.UpdateUserProfile).Methods("PUT")
-	router.HandleFunc("/review", controller.ReviewItem).Methods("POST")
 
-	router.HandleFunc("/getreview", controller.GetItemReview).Methods("GET")
+	router.HandleFunc("/review", controller.ReviewItem).Methods("POST")
+	router.HandleFunc("/review", controller.GetItemReview).Methods("GET")
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8080"},
