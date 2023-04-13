@@ -2,8 +2,6 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
-	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,14 +17,9 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
-	//user jika blm ada cookie
-	vars := mux.Vars(r)
-	UserID := vars["user_id"]
+	_, UserID, _, _ := validateTokenFromCookies(r)
 
-	//user jika sudah ada cookie
-	//_, id, _, _ := validateTokenFromCookies(r)
-
-	query := "SELECT a.cartId,b.quantity,c.itemId,c.shopId,c.itemName,c.itemDesc,c.itemCategory,c.itemPrice,c.itemStock FROM cart a INNER JOIN cart_detail b ON a.cartId = b.cartId INNER JOIN item c ON b.itemId = c.itemId WHERE a.userId ='" + UserID + "'"
+	query := "SELECT a.cartId,b.quantity,c.itemId,c.shopId,c.itemName,c.itemDesc,c.itemCategory,c.itemPrice,c.itemStock FROM cart a INNER JOIN cart_detail b ON a.cartId = b.cartId INNER JOIN item c ON b.itemId = c.itemId WHERE a.userId ='" + strconv.Itoa(UserID) + "'"
 
 	rows, err := db.Query(query)
 
@@ -51,12 +44,7 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cart.CartDetail = cartDetails
-	var response model.CartResponse
-	response.Status = 200
-	response.Message = "Success"
-	response.Data = cart
-	w.Header().Set("Content=Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	sendSuccessResponse(w, "Get Item di Cart Berhasil", cart)
 }
 
 // insert item ke cart... asumsi insert itemnya itu item yang tidak ada di cart, kalau itemnya ada, berarti pakai update
@@ -73,42 +61,40 @@ func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
 
-	//user jika blm ada cookie
-	vars := mux.Vars(r)
-	UserID := vars["user_id"]
+	_, UserID, _, _ := validateTokenFromCookies(r)
 
-	//user jika sudah ada cookie
-	//_, id, _, _ := validateTokenFromCookies(r)
-	var cart model.UpdateCart
+	query := "SELECT cartId FROM cart WHERE userId ='" + strconv.Itoa(UserID) + "'"
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Println(err)
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
 
-	_, errQuery := db.Exec("INSERT INTO cart(cartId,userId)values(?,?)",
-		cart.CartID,
-		UserID,
-	)
-	var response model.GenericResponse
-	if errQuery != nil {
-		response.Status = 400
-		response.Message = "Gagal Insert Cart"
-	} else {
-		_, errQuery := db.Exec("INSERT INTO cart_detail(cartId,itemId,quantity)values(?,?,?)",
-			cart.CartID,
-			itemId,
-			quantity,
-		)
-		cart.ItemID = itemId
-		cart.Quantity = quantity
-		if errQuery != nil {
-			fmt.Println(errQuery)
-			response.Status = 400
-			response.Message = "Insert Item ke Cart Gagal"
+	var cart model.Cart
+	var cartDetail model.CartDetail
+	for rows.Next() {
+		if err := rows.Scan(&cart.ID); err != nil {
+			log.Println(err)
+			sendErrorResponse(w, "Error result scan")
+			return
 		} else {
-			response.Status = 200
-			response.Message = "Insert Item ke Cart Berhasil"
-			response.Data = cart
+			_, errQuery := db.Exec("INSERT INTO cart_detail(cartId,itemId,quantity)values(?,?,?)",
+				cart.ID,
+				itemId,
+				quantity,
+			)
+			cartDetail.Item.ID = itemId
+			cartDetail.Quantity = quantity
+			cart.CartDetail = append(cart.CartDetail, cartDetail)
+			if errQuery == nil {
+				sendSuccessResponse(w, "Insert Item ke Cart Berhasil", cart)
+			} else {
+				log.Println(errQuery)
+				sendErrorResponse(w, "Insert Item ke cart gagal")
+			}
 		}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }
 
 // update quantity cart, masih memakai dummy user /2  jika sudah ada harus diganti memakai cookie
@@ -126,14 +112,9 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
 
-	//user jika blm ada cookie
-	vars := mux.Vars(r)
-	UserID := vars["user_id"]
+	_, UserID, _, _ := validateTokenFromCookies(r)
 
-	//user jika sudah ada cookie
-	//_, id, _, _ := validateTokenFromCookies(r)
-
-	query := "SELECT cartId FROM cart WHERE userId ='" + UserID + "'"
+	query := "SELECT cartId FROM cart WHERE userId ='" + strconv.Itoa(UserID) + "'"
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Println(err)
@@ -141,9 +122,10 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cart model.UpdateCart
+	var cart model.Cart
+	var cartDetail model.CartDetail
 	for rows.Next() {
-		if err := rows.Scan(&cart.CartID); err != nil {
+		if err := rows.Scan(&cart.ID); err != nil {
 			log.Println(err)
 			sendErrorResponse(w, "Error result scan")
 			return
@@ -151,26 +133,20 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 			//belum cek item nya ada atau gk di cart
 			_, errQuery := db.Exec("UPDATE cart_detail SET quantity = ? WHERE cartId=? AND itemId=?",
 				quantity,
-				cart.CartID,
+				cart.ID,
 				itemId,
 			)
-			cart.ItemID = itemId
-			cart.Quantity = quantity
-			var response model.GenericResponse
+			cartDetail.Item.ID = itemId
+			cartDetail.Quantity = quantity
+			cart.CartDetail = append(cart.CartDetail, cartDetail)
 			if errQuery == nil {
-				response.Status = 200
-				response.Message = "Update Cart Berhasil"
-				response.Data = cart
+				sendSuccessResponse(w, "Update Cart Berhasil", cart)
 			} else {
-				fmt.Println(errQuery)
-				response.Status = 400
-				response.Message = "Update Cart Gagal"
+				log.Println(errQuery)
+				sendErrorResponse(w, "Update Cart Gagal")
 			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(response)
 		}
 	}
-
 }
 func DeleteItemFromCart(w http.ResponseWriter, r *http.Request) {
 	db := connect()
@@ -181,15 +157,11 @@ func DeleteItemFromCart(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Failed")
 		return
 	}
-	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
-	//user jika blm ada cookie
 	vars := mux.Vars(r)
-	UserID := vars["user_id"]
+	itemId := vars["item_id"]
+	_, UserID, _, _ := validateTokenFromCookies(r)
 
-	//user jika sudah ada cookie
-	//_, id, _, _ := validateTokenFromCookies(r)
-
-	query := "SELECT cartId FROM cart WHERE userId ='" + UserID + "'"
+	query := "SELECT cartId FROM cart WHERE userId ='" + strconv.Itoa(UserID) + "'"
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Println(err)
@@ -197,30 +169,26 @@ func DeleteItemFromCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var cart model.DeleteCart
+	var cart model.Cart
+	var cartDetail model.CartDetail
 	for rows.Next() {
-		if err := rows.Scan(&cart.CartID); err != nil {
+		if err := rows.Scan(&cart.ID); err != nil {
 			log.Println(err)
 			sendErrorResponse(w, "Error result scan")
 			return
 		} else {
-			_, errQuery := db.Exec("DELETE FROM cart_detail WHERE cardId=? AND itemId=?",
-				cart.CartID,
+			_, errQuery := db.Exec("DELETE FROM cart_detail WHERE cartId=? AND itemId=?",
+				cart.ID,
 				itemId,
 			)
-
-			cart.ItemID = itemId
-			var response model.GenericResponse
+			cartDetail.Item.ID, _ = strconv.Atoi(itemId)
+			cart.CartDetail = append(cart.CartDetail, cartDetail)
 			if errQuery == nil {
-				response.Status = 200
-				response.Message = "Delete Item dari Cart Berhasil"
+				sendSuccessResponse(w, "Delete Item dari Cart Berhasil", cart)
 			} else {
-				fmt.Println(errQuery)
-				response.Status = 400
-				response.Message = "Delete Item dari Cart Gagal"
+				log.Println(errQuery)
+				sendErrorResponse(w, "Delete Item dari Cart Gagal")
 			}
-			w.Header().Set("Content-Type", "application/json")
-			json.NewEncoder(w).Encode(response)
 		}
 	}
 }
