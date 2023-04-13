@@ -132,3 +132,40 @@ func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	sendSuccessResponse(w, "Success", shopList)
 }
+func RegisterShop(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+	err := r.ParseForm()
+	if err != nil {
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
+	shopname := r.Form.Get("shop_name")
+	shopcategory := r.Form.Get("shop_category")
+	shopadress := r.Form.Get("shop_address")
+	shoptelephone := r.Form.Get("shop_telephone")
+	shopemail := r.Form.Get("shop_email")
+
+	query := "INSERT INTO shop (shopName,shopReputation,shopCategory,shopAddress,shopTelephone,shopEmail,shopStatus) "
+	query += "VALUES (?,?,?,?,?,?,?)"
+	res, errQuery := db.Exec(query, shopname, 0, shopcategory, shopadress, shoptelephone, shopemail, 0)
+	if errQuery != nil {
+		log.Println(errQuery)
+		sendErrorResponse(w, "Failed to register shop")
+		return
+	} else {
+		id, _ := res.LastInsertId()
+		shopid := int(id)
+		//Ambil dari cookie
+		userid := 5
+		query = "INSERT INTO shop_admin VALUES(?,?)"
+		_, errQuery2 := db.Exec(query, shopid, userid)
+		if errQuery2 != nil {
+			log.Println(errQuery2)
+			sendErrorResponse(w, "Failed to register shop")
+		} else {
+			sendSuccessResponse(w, "Successfully registered shop", nil)
+		}
+
+	}
+}
