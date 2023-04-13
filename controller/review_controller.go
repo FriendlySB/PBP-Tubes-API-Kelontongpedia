@@ -74,7 +74,7 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 		var check bool
 		query := "SELECT COUNT(*) "
 		query += "FROM users u "
-		query += "INNER JOIN transaction t ON t.userId=u.userid"
+		query += "INNER JOIN transaction t ON t.userId=u.userid "
 		query += "INNER JOIN transaction_detail td ON td.transactionId=t.transactionId "
 		query += "INNER JOIN item i ON i.itemId=td.itemId "
 		query += "WHERE u.userid=? AND i.itemId=? AND t.progress='Done'"
