@@ -34,6 +34,7 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 		rows, err := db.Query(query)
 		if err != nil {
 			log.Fatal(err)
+			sendErrorResponse(w, "Error")
 		} else {
 			var user model.User
 			var users []model.User

@@ -14,3 +14,8 @@ type CartResponse struct {
 	Message string `json:"message"`
 	Data    Cart   `json:"cart"`
 }
+type ReviewResponse struct {
+	Status  int     `json:"status"`
+	Message string  `json:"message"`
+	Data    []Review  `json:"review"`
+}
