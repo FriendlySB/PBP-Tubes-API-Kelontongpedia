@@ -53,3 +53,13 @@ func GetItemReview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+func ReviewItem(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	currentID := getUserIdFromCookie(r)
+
+	if currentID == -1 {
+		sendUnauthorizedResponse(w)
+	}
+}
