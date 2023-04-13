@@ -63,11 +63,19 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.Form.Get("name")
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
 	address := r.Form.Get("address")
-	res, errQuery := db.Exec("INSERT INTO users(name,address)values(?,?,?)",
+	telephoneNo := r.Form.Get("telephone")
+
+	res, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
 		name,
+		email,
+		password,
 		address,
+		telephoneNo,
 	)
+	// INSERT INTO CART (userid) VALUES (id)
 	id, _ := res.LastInsertId()
 	var user model.User
 	user.ID = int(id)
@@ -128,6 +136,7 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Password does not match!")
 	}
 }
+
 func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
