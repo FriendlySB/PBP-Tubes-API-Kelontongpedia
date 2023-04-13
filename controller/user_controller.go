@@ -25,29 +25,21 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	password := r.Form.Get("password")
 
 	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + password + "'"
-	rows, err := db.Query(query)
-	if err != nil {
-		if err == sql.ErrNoRows {
+	var user model.User
+	err1 := db.QueryRow(query).Scan(&user.ID, &user.Name, &user.UserType)
+
+	if err1 != nil {
+		if err1 == sql.ErrNoRows {
 			sendErrorResponse(w, "Invalid email or password")
 			return
 		}
-		log.Println(err)
+		log.Println(err1)
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
+	generateToken(w, user.ID, user.Name, user.UserType)
+	sendSuccessResponse(w, "Login Success", nil)
 
-	var user model.User
-	for rows.Next() {
-		if err := rows.Scan(&user.ID, &user.Name, &user.UserType); err != nil {
-			log.Println(err)
-			sendErrorResponse(w, "Error result scan")
-			return
-		} else {
-			generateToken(w, user.ID, user.Name, user.UserType)
-			sendSuccessResponse(w, "Login Success", nil)
-		}
-	}
-	sendErrorResponse(w, "Login Failed")
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
