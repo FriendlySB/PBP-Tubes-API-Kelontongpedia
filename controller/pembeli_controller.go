@@ -82,15 +82,26 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		telpNo := r.Form.Get("telpNo")
 
 		_, errQuery := db.Exec("UPDATE users SET name=?, email=?, address=?, telpNo=? WHERE userid=?", name, email, address, telpNo, currentID)
-
-		var response model.GenericResponse
+		
 		if errQuery == nil {
-			response.Status = 200
-			response.Message = "Success"
+			rows, err := db.Query("SELECT userid, name, email, address, telpNo FROM users WHERE userid = ?", currentID)
+			if err != nil {
+				sendErrorResponse(w, "Error while fetching updated data")
+				return
+			}
+			defer rows.Close()
+
+			var user model.User
+			for rows.Next() {
+				if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
+					sendErrorResponse(w, "Error while scanning rows")
+					return
+				}
+			}
+			response := model.GenericResponse{Status: 200, Message: "Success", Data: user}
 			json.NewEncoder(w).Encode(response)
 		} else {
-			response.Status = 400
-			response.Message = "Error"
+			response := model.GenericResponse{Status: 400, Message: "Error"}
 			json.NewEncoder(w).Encode(response)
 		}
 	}
