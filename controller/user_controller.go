@@ -242,14 +242,28 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 			sendErrorResponse(w, "Error while parsing form")
 			return
 		}
-		itemID := r.Form.Get("itemID")
-		review := r.Form.Get("review")
+		itemId := r.Form.Get("itemId")
 		rating := r.Form.Get("rating")
+		review := r.Form.Get("review")
 
-		_, errQuery := db.Exec("INSERT INTO review(itemID, userID, rating, review) VALUES(?,?,?,?)", itemID, currentID, rating, review)
-
+		_, errQuery := db.Exec("INSERT INTO review(itemID, userID, rating, review) VALUES(?,?,?,?)", itemId, currentID, rating, review)
+		
 		if errQuery == nil {
-			response := model.GenericResponse{Status: 200, Message: "Success"}
+			rows, err := db.Query("SELECT reviewId, userId, review_date, rating, review FROM review WHERE reviewId = LAST_INSERT_ID()")
+			if err != nil {
+				sendErrorResponse(w, "Error while fetching updated data")
+				return
+			}
+			defer rows.Close()
+
+			var review model.Review
+			for rows.Next() {
+				if err := rows.Scan(&review.ID, &review.UserId, &review.ReviewDate, &review.Rating, &review.Review); err != nil {
+					sendErrorResponse(w, "Error while scanning rows")
+					return
+				}
+			}
+			response := model.GenericResponse{Status: 200, Message: "Success", Data: review}
 			json.NewEncoder(w).Encode(response)
 		} else {
 			response := model.GenericResponse{Status: 400, Message: "Error"}
