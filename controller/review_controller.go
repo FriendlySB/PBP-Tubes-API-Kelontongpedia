@@ -71,6 +71,19 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 		rating := r.Form.Get("rating")
 		review := r.Form.Get("review")
 
+		var check bool
+		row := db.QueryRow("SELECT COUNT(*) FROM users u INNER JOIN transaction t ON t.userId=u.userid INNER JOIN transaction_detail td ON td.transactionId=t.transactionId INNER JOIN item i ON i.itemId=td.itemId WHERE u.userid=? AND i.itemId=? AND t.progress='Done'", currentID, itemId)
+		err = row.Scan(&check)
+		if err != nil {
+			sendErrorResponse(w, "Error while checking purchase history")
+			return
+		}
+
+		if !check {
+			sendErrorResponse(w, "You haven't bought this item")
+			return
+		}
+
 		_, errQuery := db.Exec("INSERT INTO review(itemID, userID, rating, review) VALUES(?,?,?,?)", itemId, currentID, rating, review)
 		
 		if errQuery == nil {
