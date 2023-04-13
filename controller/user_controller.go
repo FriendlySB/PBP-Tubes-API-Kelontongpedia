@@ -2,6 +2,7 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -48,9 +49,42 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 }
 func Logout(w http.ResponseWriter, r *http.Request) {
-	resetUserToken(w)
 	var user model.User
+	_, UserID, name, _ := validateTokenFromCookies(r)
+	user.ID = UserID
+	user.Name = name
+	resetUserToken(w)
 	sendSuccessResponse(w, "Logout Success", user)
+}
+
+// fungsi untuk register user
+func RegisterUser(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+	//Read From Request Body
+	err := r.ParseForm()
+	if err != nil {
+		log.Println(err)
+		sendErrorResponse(w, "Failed")
+		return
+	}
+	name := r.Form.Get("name")
+	address := r.Form.Get("address")
+	res, errQuery := db.Exec("INSERT INTO users(name,address)values(?,?,?)",
+		name,
+		address,
+	)
+	id, _ := res.LastInsertId()
+	var user model.User
+	user.ID = int(id)
+	user.Name = name
+	user.Address = address
+	if errQuery == nil {
+		sendSuccessResponse(w, "Register Berhasil", user)
+	} else {
+		fmt.Println(errQuery)
+		sendErrorResponse(w, "Register Gagal")
+	}
 }
 func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	db := connect()
