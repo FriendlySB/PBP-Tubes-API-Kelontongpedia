@@ -57,6 +57,7 @@ func main() {
 
 	router.HandleFunc("/login", controller.Login).Methods("POST")
 	router.HandleFunc("/logout", controller.Logout).Methods("POST")
+	router.HandleFunc("/password", controller.ChangePassword).Methods("PUT")
 
 	router.HandleFunc("/cart", controller.GetCart).Methods("GET")
 	router.HandleFunc("/cart", controller.InsertItemToCart).Methods("POST")
@@ -77,8 +78,7 @@ func main() {
 	router.HandleFunc("/review", controller.ReviewItem).Methods("POST")
 
 	router.HandleFunc("/getreview", controller.GetItemReview).Methods("GET")
-	
-	
+
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8080"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
