@@ -4,7 +4,6 @@ import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"strconv"
@@ -63,21 +62,31 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	name := r.Form.Get("name")
+	email := r.Form.Get("email")
+	password := r.Form.Get("password")
 	address := r.Form.Get("address")
-	res, errQuery := db.Exec("INSERT INTO users(name,address)values(?,?,?)",
+	telephoneNo := r.Form.Get("telephone")
+
+	res, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
 		name,
+		email,
+		password,
 		address,
+		telephoneNo,
 	)
-	id, _ := res.LastInsertId()
-	var user model.User
-	user.ID = int(id)
-	user.Name = name
-	user.Address = address
-	if errQuery == nil {
-		sendSuccessResponse(w, "Register Berhasil", user)
-	} else {
-		fmt.Println(errQuery)
+	if errQuery != nil {
+		log.Println(errQuery)
 		sendErrorResponse(w, "Register Gagal")
+	} else {
+		id, _ := res.LastInsertId()
+		_, errQuery2 := db.Exec("INSERT INTO CART (userid) VALUES (?)", id)
+		if errQuery2 != nil {
+			log.Println(errQuery)
+			sendErrorResponse(w, "Register Gagal")
+		} else {
+			sendSuccessResponse(w, "Register Berhasil", nil)
+		}
+
 	}
 }
 
@@ -128,6 +137,7 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Password does not match!")
 	}
 }
+
 func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
