@@ -57,6 +57,7 @@ func main() {
 
 	router.HandleFunc("/login", controller.Login).Methods("POST")
 	router.HandleFunc("/logout", controller.Logout).Methods("POST")
+	router.HandleFunc("/register", controller.RegisterUser).Methods("POST")
 	router.HandleFunc("/password", controller.ChangePassword).Methods("PUT")
 
 	router.HandleFunc("/cart", controller.GetCart).Methods("GET")
