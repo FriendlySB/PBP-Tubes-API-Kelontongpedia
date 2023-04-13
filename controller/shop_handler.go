@@ -271,7 +271,7 @@ func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 	shopid := r.URL.Query().Get("shop_id")
 	shopname := r.URL.Query().Get("shop_name")
 	shopcategory := r.URL.Query().Get("shop_category")
-	shopprice := r.URL.Query().Get("shop_price")
+	shopreputation := r.URL.Query().Get("shop_reputation")
 
 	query := "SELECT * FROM shop "
 
@@ -294,13 +294,13 @@ func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		query += " shopCategory = '" + shopcategory + "' "
 	}
-	if shopprice != "" {
+	if shopreputation != "" {
 		if strings.Contains(query, "WHERE") {
 			query += "AND"
 		} else {
 			query += "WHERE"
 		}
-		query += " shopPrice <= '" + shopprice + "'"
+		query += " shopReputation >= '" + shopreputation + "'"
 	}
 	fmt.Println(query)
 	rows, err := db.Query(query)
