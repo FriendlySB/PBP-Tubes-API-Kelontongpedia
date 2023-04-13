@@ -69,6 +69,29 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	if currentID == -1 {
 		sendUnauthorizedResponse(w)
+	} else {
+		err := r.ParseForm()
+		if err != nil {
+			sendErrorResponse(w, "Error while parsing form")
+			return
+		}
+		name := r.Form.Get("name")
+		email := r.Form.Get("email")
+		address := r.Form.Get("address")
+		telpNo := r.Form.Get("telpNo")
+		
+		_, errQuery := db.Exec("UPDATE users SET name=?, email=?, address=?, telpNo=? WHERE userid=?", name, email, address, telpNo, currentID)
+
+		var response model.GenericResponse
+		if errQuery == nil {
+			response.Status = 200
+			response.Message = "Success"
+			json.NewEncoder(w).Encode(response)
+		} else {
+			response.Status = 400
+			response.Message = "Error"
+			json.NewEncoder(w).Encode(response)
+		}
 	}
 }
 
