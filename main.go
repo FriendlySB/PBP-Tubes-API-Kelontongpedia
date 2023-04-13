@@ -74,7 +74,7 @@ func main() {
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
 
 	router.HandleFunc("/profile", controller.GetUserProfile).Methods("GET")
-	router.HandleFunc("/profile", controller.UpdateUserProfile).Methods("PUT")
+	router.HandleFunc("/updateprofile", controller.UpdateUserProfile).Methods("PUT")
 	router.HandleFunc("/review", controller.ReviewItem).Methods("POST")
 
 	router.HandleFunc("/getreview", controller.GetItemReview).Methods("GET")
@@ -90,5 +90,5 @@ func main() {
 	http.Handle("/", router)
 	fmt.Println("Connected to port 8080")
 	log.Println("Connected to port 8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+	log.Fatal(http.ListenAndServe(":8181", handler))
 }
