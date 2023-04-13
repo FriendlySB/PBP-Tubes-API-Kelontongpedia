@@ -4,6 +4,7 @@ import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
