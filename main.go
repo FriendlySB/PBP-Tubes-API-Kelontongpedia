@@ -74,6 +74,8 @@ func main() {
 	router.HandleFunc("/shop", controller.RegisterShop).Methods("POST")
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
 
+	router.HandleFunc("/transaction", controller.GetAllTransaction).Methods("GET")
+	router.HandleFunc("/transaction", controller.InsertItemToTransaction).Methods("POST")
 	router.HandleFunc("/updateTransaction/{transaction_id}", controller.UpdateTransaction).Methods("PUT")
 
 	router.HandleFunc("/profile", controller.GetUserProfile).Methods("GET")

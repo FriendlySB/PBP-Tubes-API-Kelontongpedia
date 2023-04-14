@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -18,30 +17,19 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	//baca userID dari cookie
 	_, UserID, _, _ := validateTokenFromCookies(r)
-
+	if UserID == -1 {
+		sendUnauthorizedResponse(w)
+		return
+	}
 	//baca dari Query Param
-	transactionId := r.URL.Query()["transactionId"]
-	shopId := r.URL.Query()["shopId"]
-
-	query := "SELECT a.transactionId,a.userId,a.address,a.date,a.delivery,a.progress,a.paymentType,b.transactionId,b.itemId,b.quantity FROM `transaction` a INNER JOIN transaction_detail b ON a.transactionId = b.transactionId"
-	if transactionId != nil {
-		query += " WHERE a.transactionId='" + transactionId[0] + "'"
-	}
-	if UserID != 0 {
-		if strings.Contains(query, "WHERE") {
-			query += "AND"
-		} else {
-			query += "WHERE"
+	transactionId := r.URL.Query()["transaction_id"]
+	shopId := r.URL.Query()["shop_id"]
+	query := "SELECT `transactionId`,`address`,`date`,`delivery`,`progress`,`paymentType` FROM `transaction` "
+	if shopId == nil {
+		query += " WHERE userId='" + strconv.Itoa(UserID) + "'"
+		if transactionId != nil {
+			query += " AND transactionId='" + transactionId[0] + "'"
 		}
-		query += " a.userId='" + strconv.Itoa(UserID) + "'"
-	}
-	if shopId != nil {
-		if strings.Contains(query, "WHERE") {
-			query += "AND"
-		} else {
-			query += "WHERE"
-		}
-		query += " b.itemId IN (SELECT itemId FROM item where shopId='" + shopId[0] + "')"
 	}
 	rows, err := db.Query(query)
 	if err != nil {
@@ -52,30 +40,50 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 
 	var transaction model.Transaction
 	var transactions []model.Transaction
-	var transactionDetail model.TransactionDetail
-	var transactionDetails []model.TransactionDetail
-	var item model.Item
 	for rows.Next() {
-		if err := rows.Scan(&transaction.ID, &transaction.Address, &transaction.Date, &transaction.Delivery, &transaction.Progress, &transaction.PaymentType, &transactionDetail.Quantity, &item.ID, &item.ShopID, &item.Name, &item.Desc, &item.Category, &item.Price, &item.Stock); err != nil {
+		if err := rows.Scan(&transaction.ID, &transaction.Address, &transaction.Date, &transaction.Delivery, &transaction.Progress, &transaction.PaymentType); err != nil {
 			log.Println(err)
 			sendErrorResponse(w, "Error result scan")
 			return
 		} else {
-			//belum ambil isi transaction details dari transactionId
-			transactionDetail.Item = item
-			transactionDetail.IdTransaction = transaction.ID
-			transactionDetails = append(transactionDetails, transactionDetail)
 			transactions = append(transactions, transaction)
 		}
 	}
-	for i := range transactions {
-		for j := range transactionDetails {
-			if transactions[i].ID == transactionDetails[j].IdTransaction {
-				transactions[i].TransactionDetail = append(transactions[i].TransactionDetail, transactionDetails[j])
+	for i, v := range transactions {
+		query2 := "SELECT a.quantity,b.itemId,b.shopId,b.itemName,b.itemDesc,b.itemCategory,b.itemPrice,b.itemStock FROM transaction_detail a INNER JOIN item b ON a.itemId =b.itemId WHERE a.transactionId = '" + strconv.Itoa(v.ID) + "'"
+		if shopId != nil {
+			query2 += " AND b.itemId IN (SELECT itemId FROM item where shopId='" + shopId[0] + "')"
+		}
+		rows2, err2 := db.Query(query2)
+		if err2 != nil {
+			log.Println(err2)
+			sendErrorResponse(w, "Something went wrong, please try again")
+			return
+		}
+
+		var transactionDetail model.TransactionDetail
+		var transactionDetails []model.TransactionDetail
+		var item model.Item
+		for rows2.Next() {
+			if err := rows2.Scan(&transactionDetail.Quantity, &item.ID, &item.ShopID, &item.Name, &item.Desc, &item.Category, &item.Price, &item.Stock); err != nil {
+				log.Println(err)
+				sendErrorResponse(w, "Error result scan")
+				return
+			} else {
+				transactionDetail.Item = item
+				transactionDetails = append(transactionDetails, transactionDetail)
 			}
 		}
+		transactions[i].TransactionDetail = transactionDetails
 	}
-	sendSuccessResponse(w, "Success", transactions)
+	//biar kalau ada transaksi yang detail transaksinya null dihapus
+	var filteredTransactions []model.Transaction
+	for _, v := range transactions {
+		if v.TransactionDetail != nil {
+			filteredTransactions = append(filteredTransactions, v)
+		}
+	}
+	sendSuccessResponse(w, "Get Transaction Berhasil", filteredTransactions)
 }
 
 // insert item ke transaction... asumsi insert itemnya itu item yang tidak ada di transaction, kalau itemnya ada, berarti pakai update
