@@ -42,10 +42,6 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	var user model.User
-	_, UserID, name, _ := validateTokenFromCookies(r)
-	user.ID = UserID
-	user.Name = name
 	resetUserToken(w)
 	sendSuccessResponse(w, "Logout Success", nil)
 }
