@@ -57,6 +57,7 @@ func main() {
 
 	router.HandleFunc("/login", controller.Login).Methods("POST")
 	router.HandleFunc("/logout", controller.Logout).Methods("POST")
+	router.HandleFunc("/register", controller.RegisterUser).Methods("POST")
 	router.HandleFunc("/password", controller.ChangePassword).Methods("PUT")
 
 	router.HandleFunc("/cart", controller.GetCart).Methods("GET")
@@ -70,14 +71,18 @@ func main() {
 	router.HandleFunc("/item/{item_id}", controller.DeleteItem).Methods("Delete")
 
 	router.HandleFunc("/shop", controller.GetShopProfile).Methods("GET")
-	router.HandleFunc("/updateTransaction/{transaction_id}", controller.UpdateTransaction).Methods("PUT")
+	router.HandleFunc("/shop", controller.RegisterShop).Methods("POST")
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
+
+	router.HandleFunc("/transaction", controller.GetAllTransaction).Methods("GET")
+	router.HandleFunc("/transaction", controller.InsertItemToTransaction).Methods("POST")
+	router.HandleFunc("/updateTransaction/{transaction_id}", controller.UpdateTransaction).Methods("PUT")
 
 	router.HandleFunc("/profile", controller.GetUserProfile).Methods("GET")
 	router.HandleFunc("/updateprofile", controller.UpdateUserProfile).Methods("PUT")
-	router.HandleFunc("/review", controller.ReviewItem).Methods("POST")
 
-	router.HandleFunc("/getreview", controller.GetItemReview).Methods("GET")
+	router.HandleFunc("/review", controller.ReviewItem).Methods("POST")
+	router.HandleFunc("/review", controller.GetItemReview).Methods("GET")
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8080"},
@@ -88,7 +93,9 @@ func main() {
 	handler := corsHandler.Handler(router)
 
 	http.Handle("/", router)
-	fmt.Println("Connected to port 8080")
-	log.Println("Connected to port 8080")
-	log.Fatal(http.ListenAndServe(":8080", handler))
+
+	fmt.Println("Connected to port 8181")
+	log.Println("Connected to port 8181")
+
+	log.Fatal(http.ListenAndServe(":8181", handler))
 }
