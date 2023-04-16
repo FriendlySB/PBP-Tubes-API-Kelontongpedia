@@ -63,6 +63,14 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	address := r.Form.Get("address")
 	telephoneNo := r.Form.Get("telephone")
 
+	user := model.User{
+        Name:        name,
+        Email:       email,
+        Password:    password,
+        Address:     address,
+        TelephoneNo: telephoneNo,
+    }
+	
 	res, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
 		name,
 		email,
@@ -70,6 +78,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		address,
 		telephoneNo,
 	)
+
 	if errQuery != nil {
 		log.Println(errQuery)
 		sendErrorResponse(w, "Register Gagal")
@@ -82,8 +91,8 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		} else {
 			sendSuccessResponse(w, "Register Berhasil", nil)
 		}
-
 	}
+	sendMail(user)
 }
 
 func ChangePassword(w http.ResponseWriter, r *http.Request) {
