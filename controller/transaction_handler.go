@@ -11,12 +11,13 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// get all transaction , filter : transactionID, userID
+// get all transaction , filter : transactionID dan  userID , shopID dan userID
 func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 	//baca userID dari cookie
 	_, UserID, _, _ := validateTokenFromCookies(r)
+	//jika user belum login, maka akan direturn unauthorized response
 	if UserID == -1 {
 		sendUnauthorizedResponse(w)
 		return
@@ -24,12 +25,33 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	//baca dari Query Param
 	transactionId := r.URL.Query()["transaction_id"]
 	shopId := r.URL.Query()["shop_id"]
+	//query untuk mengambil daftar transaksi yang akan dibaca
 	query := "SELECT `transactionId`,`address`,`date`,`delivery`,`progress`,`paymentType` FROM `transaction` "
+	//jika tidak ada shopId, berarti ini query pengguna, maka akan diambil transaksi pengguna
+	//dan jika ada transactonId, transaksi itu saja yang akan diambil
 	if shopId == nil {
 		query += " WHERE userId='" + strconv.Itoa(UserID) + "'"
 		if transactionId != nil {
 			query += " AND transactionId='" + transactionId[0] + "'"
 		}
+	} else {
+		//jika ada shopId, maka id user yang mengakses harus dicek, apakah terdaftar di daftar admin toko.
+		var check bool
+		query2 := "select * from shop_admin WHERE shopId=? AND userId=?"
+		row2 := db.QueryRow(query2, shopId[0], UserID)
+		err2 := row2.Scan(&check)
+		//jika terjadi eror saat mengecek
+		if err2 != nil {
+			sendErrorResponse(w, "Error ketika mengecek apakah user admin toko")
+			return
+		}
+		//jika user bukan admin toko, maka akan direturn unauthorized response
+		if !check {
+			sendUnauthorizedResponse(w)
+			return
+		}
+		//disini harusnya query transaksi apa saja yang terjadi di toko berdasarkan shopId, tapi belum beres
+		query += "Where"
 	}
 	rows, err := db.Query(query)
 	if err != nil {
@@ -51,9 +73,6 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	}
 	for i, v := range transactions {
 		query2 := "SELECT a.quantity,b.itemId,b.shopId,b.itemName,b.itemDesc,b.itemCategory,b.itemPrice,b.itemStock FROM transaction_detail a INNER JOIN item b ON a.itemId =b.itemId WHERE a.transactionId = '" + strconv.Itoa(v.ID) + "'"
-		if shopId != nil {
-			query2 += " AND b.itemId IN (SELECT itemId FROM item where shopId='" + shopId[0] + "')"
-		}
 		rows2, err2 := db.Query(query2)
 		if err2 != nil {
 			log.Println(err2)
