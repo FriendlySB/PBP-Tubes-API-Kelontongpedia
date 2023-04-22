@@ -85,7 +85,7 @@ func main() {
 	router.HandleFunc("/review", controller.GetItemReview).Methods("GET")
 
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"localhost:8080"},
+		AllowedOrigins:   []string{"localhost:8181"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
 		AllowCredentials: true,
 	})
