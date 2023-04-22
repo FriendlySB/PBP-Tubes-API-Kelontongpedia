@@ -2,7 +2,6 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -26,7 +25,7 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	transactionId := r.URL.Query()["transaction_id"]
 	shopId := r.URL.Query()["shop_id"]
 	//query untuk mengambil daftar transaksi yang akan dibaca
-	query := "SELECT `transactionId`,`address`,`date`,`delivery`,`progress`,`paymentType` FROM `transaction` "
+	query := "SELECT DISTINCT t.transactionId, t.address, t.date, t.delivery, t.progress, t.paymentType FROM transaction t"
 	//jika tidak ada shopId, berarti ini query pengguna, maka akan diambil transaksi pengguna
 	//dan jika ada transactonId, transaksi itu saja yang akan diambil
 	if shopId == nil {
@@ -51,15 +50,20 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		//disini harusnya query transaksi apa saja yang terjadi di toko berdasarkan shopId, tapi belum beres
-		query += "Where"
+		query = " INNER JOIN transaction_detail td ON t.`transactionId` = td.`transactionId` INNER JOIN item i ON td.itemId = i.itemId WHERE i.shopId ='" + shopId[0] + "'"
+		if transactionId != nil {
+			query += " AND transactionId='" + transactionId[0] + "'"
+		}
+		query += " GROUP BY t.`transactionId`;"
 	}
+	//eksekusi query mencari transaksi apa saja yang ada
 	rows, err := db.Query(query)
 	if err != nil {
 		log.Println(err)
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
-
+	//masukan transaksi tersebut ke array transactions
 	var transaction model.Transaction
 	var transactions []model.Transaction
 	for rows.Next() {
@@ -71,6 +75,7 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 			transactions = append(transactions, transaction)
 		}
 	}
+	//query setiap item yang ada di transaksi tersebut
 	for i, v := range transactions {
 		query2 := "SELECT a.quantity,b.itemId,b.shopId,b.itemName,b.itemDesc,b.itemCategory,b.itemPrice,b.itemStock FROM transaction_detail a INNER JOIN item b ON a.itemId =b.itemId WHERE a.transactionId = '" + strconv.Itoa(v.ID) + "'"
 		rows2, err2 := db.Query(query2)
@@ -95,22 +100,29 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 		}
 		transactions[i].TransactionDetail = transactionDetails
 	}
+	//dikomen dulu karena blm dicek lagi
 	//biar kalau ada transaksi yang detail transaksinya null dihapus
-	var filteredTransactions []model.Transaction
-	for _, v := range transactions {
-		if v.TransactionDetail != nil {
-			filteredTransactions = append(filteredTransactions, v)
-		}
-	}
-	sendSuccessResponse(w, "Get Transaction Berhasil", filteredTransactions)
+	// var filteredTransactions []model.Transaction
+	// for _, v := range transactions {
+	// 	if v.TransactionDetail != nil {
+	// 		filteredTransactions = append(filteredTransactions, v)
+	// 	}
+	// }
+	sendSuccessResponse(w, "Get Transaction Berhasil", transactions)
 }
 
 // insert item ke transaction... asumsi insert itemnya itu item yang tidak ada di transaction, kalau itemnya ada, berarti pakai update
-// masih memakai user dummy, kalau sudah ada cookie, maka akan diganti cookie
 func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
-	//Read From Request Body
+	//baca userID dari cookie
+	_, UserID, _, _ := validateTokenFromCookies(r)
+	//jika user belum login, maka akan direturn unauthorized response
+	if UserID == -1 {
+		sendUnauthorizedResponse(w)
+		return
+	}
+	//baca dari request body
 	err := r.ParseForm()
 	if err != nil {
 		sendErrorResponse(w, "Failed")
@@ -119,43 +131,33 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
 
-	//user jika blm ada cookie
-	vars := mux.Vars(r)
-	UserID := vars["user_id"]
-
-	//user jika sudah ada cookie
-	//_, id, _, _ := validateTokenFromCookies(r)
-	var transaction model.UpdateTransaction
-
+	var transaction model.Transaction
+	//Insert transaksi baru
 	_, errQuery := db.Exec("INSERT INTO transaction(transactionId,userId)values(?,?)",
-		transaction.TransactionID,
+		transaction.ID,
 		UserID,
 	)
-	var response model.GenericResponse
 	if errQuery != nil {
-		response.Status = 400
-		response.Message = "Gagal Insert Cart"
+		sendErrorResponse(w, "gagal insert transaksi")
 		return
 	} else {
+		//insert ke detail transaksi
 		_, errQuery := db.Exec("INSERT INTO transaction_detail(transactionId,itemId,quantity)values(?,?,?)",
-			transaction.TransactionID,
+			transaction.ID,
 			itemId,
 			quantity,
 		)
-		transaction.ItemID = itemId
-		transaction.Quantity = quantity
+		var transactionDetail model.TransactionDetail
+		transactionDetail.Item.ID = itemId
+		transactionDetail.Quantity = quantity
+		transaction.TransactionDetail = append(transaction.TransactionDetail, transactionDetail)
 		if errQuery != nil {
 			fmt.Println(errQuery)
-			response.Status = 400
-			response.Message = "Insert Item ke Cart Gagal"
+			sendErrorResponse(w, "gagal insert item ke transaksi")
 		} else {
-			response.Status = 200
-			response.Message = "Insert Item ke Cart Berhasil"
-			response.Data = transaction
+			sendSuccessResponse(w, "Insert item ke transaksi berhasil", transaction)
 		}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	db := connect()
