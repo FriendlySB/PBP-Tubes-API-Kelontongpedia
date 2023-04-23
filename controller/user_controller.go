@@ -64,13 +64,13 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	telephoneNo := r.Form.Get("telephone")
 
 	user := model.User{
-        Name:        name,
-        Email:       email,
-        Password:    password,
-        Address:     address,
-        TelephoneNo: telephoneNo,
-    }
-	
+		Name:        name,
+		Email:       email,
+		Password:    password,
+		Address:     address,
+		TelephoneNo: telephoneNo,
+	}
+
 	res, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
 		name,
 		email,
@@ -234,6 +234,30 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		} else {
 			response := model.GenericResponse{Status: 400, Message: "Error"}
 			json.NewEncoder(w).Encode(response)
+		}
+	}
+}
+
+func RegisterPenjual(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	currentID := getUserIdFromCookie(r)
+
+	if currentID == -1 {
+		sendUnauthorizedResponse(w)
+	} else {
+		err := r.ParseForm()
+		if err != nil {
+			sendErrorResponse(w, "Error while parsing form")
+			return
+		}
+		_, errQuery := db.Exec("UPDATE users SET usertype = ? WHERE userid=?", 2, currentID)
+
+		if errQuery != nil {
+			sendErrorResponse(w, "Failed to register the user as a seller")
+		} else {
+			sendSuccessResponse(w, "Successfully registered the user as a seller", nil)
 		}
 	}
 }
