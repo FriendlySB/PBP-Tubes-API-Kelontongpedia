@@ -19,6 +19,7 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 	itemname := r.URL.Query().Get("item_name")
 	itemcategory := r.URL.Query().Get("item_category")
 	itemprice := r.URL.Query().Get("item_price")
+	shopid := r.URL.Query().Get("shop_id")
 
 	query := "SELECT * FROM item "
 
@@ -48,6 +49,14 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 			query += "WHERE"
 		}
 		query += " itemPrice <= '" + itemprice + "'"
+	}
+	if shopid != "" {
+		if strings.Contains(query, "WHERE") {
+			query += "AND"
+		} else {
+			query += "WHERE"
+		}
+		query += " shopid = '" + shopid + "'"
 	}
 	fmt.Println(query)
 	rows, err := db.Query(query)

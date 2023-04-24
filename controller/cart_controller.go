@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// get cart dari user yang sedang berjalan, skrg masih pakai /2 dulu, nanti setelah ada cookie akan diganti dengan yang komen
+// get cart dari user yang sedang berjalan
 func GetCart(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
@@ -17,10 +17,15 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		return
 	}
+	// ambil iduser dari cookie
 	_, UserID, _, _ := validateTokenFromCookies(r)
-
+	//jika user belum login, maka akan direturn unauthorized response
+	if UserID == -1 {
+		sendUnauthorizedResponse(w)
+		return
+	}
+	//query ke database
 	query := "SELECT a.cartId,b.quantity,c.itemId,c.shopId,c.itemName,c.itemDesc,c.itemCategory,c.itemPrice,c.itemStock FROM cart a INNER JOIN cart_detail b ON a.cartId = b.cartId INNER JOIN item c ON b.itemId = c.itemId WHERE a.userId ='" + strconv.Itoa(UserID) + "'"
-
 	rows, err := db.Query(query)
 
 	if err != nil {
@@ -48,21 +53,24 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 }
 
 // insert item ke cart... asumsi insert itemnya itu item yang tidak ada di cart, kalau itemnya ada, berarti pakai update
-// masih memakai user dummy, kalau sudah ada cookie, maka akan diganti cookie
 func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
-	//Read From Request Body
 	err := r.ParseForm()
 	if err != nil {
 		sendErrorResponse(w, "Failed")
 		return
 	}
+	//baca dari request body
 	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
-
+	//ambil iduser dari cookie
 	_, UserID, _, _ := validateTokenFromCookies(r)
-
+	//jika user belum login, maka akan direturn unauthorized response
+	if UserID == -1 {
+		sendUnauthorizedResponse(w)
+		return
+	}
 	query := "SELECT cartId FROM cart WHERE userId ='" + strconv.Itoa(UserID) + "'"
 	rows, err := db.Query(query)
 	if err != nil {
@@ -97,8 +105,7 @@ func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// update quantity cart, masih memakai dummy user /2  jika sudah ada harus diganti memakai cookie
-// asumsi item nya selalu sudah ada di cart
+// update quantity cart,  asumsi item nya selalu sudah ada di cart
 func UpdateCart(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
@@ -113,7 +120,11 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
 
 	_, UserID, _, _ := validateTokenFromCookies(r)
-
+	//jika user belum login, maka akan direturn unauthorized response
+	if UserID == -1 {
+		sendUnauthorizedResponse(w)
+		return
+	}
 	query := "SELECT cartId FROM cart WHERE userId ='" + strconv.Itoa(UserID) + "'"
 	rows, err := db.Query(query)
 	if err != nil {
@@ -148,6 +159,8 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+// fungsi untuk menghapus item dari cart
 func DeleteItemFromCart(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
@@ -160,7 +173,11 @@ func DeleteItemFromCart(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	itemId := vars["item_id"]
 	_, UserID, _, _ := validateTokenFromCookies(r)
-
+	//jika user belum login, maka akan direturn unauthorized response
+	if UserID == -1 {
+		sendUnauthorizedResponse(w)
+		return
+	}
 	query := "SELECT cartId FROM cart WHERE userId ='" + strconv.Itoa(UserID) + "'"
 	rows, err := db.Query(query)
 	if err != nil {

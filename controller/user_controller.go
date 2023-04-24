@@ -236,3 +236,27 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 }
+
+func RegisterPenjual(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	currentID := getUserIdFromCookie(r)
+
+	if currentID == -1 {
+		sendUnauthorizedResponse(w)
+	} else {
+		err := r.ParseForm()
+		if err != nil {
+			sendErrorResponse(w, "Error while parsing form")
+			return
+		}
+		_, errQuery := db.Exec("UPDATE users SET usertype = ? WHERE userid=?", 2, currentID)
+
+		if errQuery != nil {
+			sendErrorResponse(w, "Failed to register the user as a seller")
+		} else {
+			sendSuccessResponse(w, "Successfully registered the user as a seller", nil)
+		}
+	}
+}

@@ -84,8 +84,11 @@ func main() {
 	router.HandleFunc("/review", controller.ReviewItem).Methods("POST")
 	router.HandleFunc("/review", controller.GetItemReview).Methods("GET")
 
+	router.HandleFunc("/banShop/{shop_id}", controller.BanShop).Methods("PUT")
+	router.HandleFunc("/banUser/{user_id}", controller.BanUser).Methods("PUT")
+
 	corsHandler := cors.New(cors.Options{
-		AllowedOrigins:   []string{"localhost:8080"},
+		AllowedOrigins:   []string{"localhost:8181"},
 		AllowedMethods:   []string{"POST", "GET", "PUT", "DELETE"},
 		AllowCredentials: true,
 	})
