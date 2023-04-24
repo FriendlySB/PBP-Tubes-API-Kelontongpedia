@@ -29,8 +29,8 @@ func BanUser(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		user := model.User{}
-        row := db.QueryRow("SELECT * FROM users WHERE userid=?", userId)
-        err := row.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo)
+        row := db.QueryRow("SELECT userid, name, email FROM users WHERE userid=?", userId)
+        err := row.Scan(&user.ID, &user.Name, &user.Email)
 		if err != nil {
             log.Println(err)
             return
