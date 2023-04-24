@@ -38,7 +38,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	generateToken(w, user.ID, user.Name, user.UserType)
 	sendSuccessResponse(w, "Login Success", nil)
-
+	sendMailLogin(user)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
@@ -66,7 +66,6 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	user := model.User{
         Name:        name,
         Email:       email,
-        Password:    password,
         Address:     address,
         TelephoneNo: telephoneNo,
     }
@@ -92,7 +91,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 			sendSuccessResponse(w, "Register Berhasil", nil)
 		}
 	}
-	sendMail(user)
+	sendMailRegis(user)
 }
 
 func ChangePassword(w http.ResponseWriter, r *http.Request) {
