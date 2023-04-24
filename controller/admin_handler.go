@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"PBP-Tubes-API-Tokopedia/model"
 	"log"
 	"net/http"
 
@@ -27,7 +28,15 @@ func BanUser(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Failed to ban user")
 		return
 	} else {
+		user := model.User{}
+        row := db.QueryRow("SELECT * FROM users WHERE userid=?", userId)
+        err := row.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo)
+		if err != nil {
+            log.Println(err)
+            return
+        }
 		sendSuccessResponse(w, "User banned", nil)
+		sendMailBanUser(user)
 	}
 }
 
@@ -43,7 +52,7 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userId := vars["shop_id"]
 	sqlStatement := "UPDATE shop SET shopstatus = 1 WHERE shopid =?"
-
+	
 	_, errQuery := db.Exec(sqlStatement, userId)
 
 	if errQuery != nil {
