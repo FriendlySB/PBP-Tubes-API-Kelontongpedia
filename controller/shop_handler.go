@@ -181,3 +181,47 @@ func RegisterShop(w http.ResponseWriter, r *http.Request) {
 
 	}
 }
+func InsertShopAdmin(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+	err := r.ParseForm()
+	if err != nil {
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
+	shopid := r.Form.Get("shop_id")
+	email := r.Form.Get("email")
+
+	userid := 0
+	emailresult := ""
+	usertype := 0
+	query := "SELECT userid,email,usertype FROM users WHERE email = '" + email + "'"
+	fmt.Println(query)
+	rows, err := db.Query(query)
+	if err != nil {
+		sendErrorResponse(w, "User with this email doesn't exists!")
+		return
+	} else {
+		for rows.Next() {
+			if err := rows.Scan(&userid, &emailresult, &usertype); err != nil {
+				log.Println(err)
+				sendErrorResponse(w, "Something went wrong, please try again")
+				return
+			} else {
+				if usertype != 2 {
+					sendErrorResponse(w, "User with this email is not a seller!")
+				} else {
+					query2 := "INSERT INTO shop_admin(shopId, userId) VALUES (?,?)"
+					_, errQuery2 := db.Exec(query2, shopid, userid)
+					if errQuery2 != nil {
+						log.Println(errQuery2)
+						sendErrorResponse(w, "Failed to add shop admin")
+					} else {
+						sendSuccessResponse(w, "Successfully added shop admin", nil)
+						//Kirim email ke shop admin baru
+					}
+				}
+			}
+		}
+	}
+}
