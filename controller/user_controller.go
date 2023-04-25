@@ -36,9 +36,17 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
+	query2 := "SELECT userid, name, email FROM users WHERE Email ='" + email + "' && Password='" + password + "'"
+	var user2 model.User
+	err2 := db.QueryRow(query2).Scan(&user2.ID, &user2.Name, &user2.Email)
+	if err2 != nil {
+		log.Println(err2)
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
 	generateToken(w, user.ID, user.Name, user.UserType)
 	sendSuccessResponse(w, "Login Success", nil)
-	sendMailLogin(user)
+	sendMailLogin(user2)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {

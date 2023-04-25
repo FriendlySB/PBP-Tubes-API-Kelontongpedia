@@ -176,7 +176,15 @@ func RegisterShop(w http.ResponseWriter, r *http.Request) {
 			log.Println(errQuery2)
 			sendErrorResponse(w, "Failed to register shop")
 		} else {
-			sendSuccessResponse(w, "Successfully registered shop", nil)
+			var user model.User
+            errQuery3 := db.QueryRow("SELECT u.userid, u.name, u.email FROM users u INNER JOIN shop_admin sa ON sa.userId = u.userid INNER JOIN shop s ON s.shopId=sa.shopId WHERE u.userid = ?", userid).Scan(&user.ID, &user.Name, &user.Email)
+			if errQuery3 != nil {
+                log.Println(errQuery3)
+                sendErrorResponse(w, "Failed to register shop")
+            } else {
+                sendSuccessResponse(w, "Successfully registered shop", nil)
+				sendMailRegisShop(user, shopemail)
+            }
 		}
 
 	}
@@ -217,8 +225,15 @@ func InsertShopAdmin(w http.ResponseWriter, r *http.Request) {
 						log.Println(errQuery2)
 						sendErrorResponse(w, "Failed to add shop admin")
 					} else {
-						sendSuccessResponse(w, "Successfully added shop admin", nil)
-						//Kirim email ke shop admin baru
+						var user model.User
+            			errQuery := db.QueryRow("SELECT u.userid,u.name,u.email FROM shop_admin sa INNER JOIN users u ON sa.userId=u.userid WHERE sa.shopId=? AND u.userid=?", shopid, userid).Scan(&user.ID, &user.Name, &user.Email)
+						if errQuery != nil {
+							log.Println(errQuery)
+							sendErrorResponse(w, "Failed to register shop")
+						} else {
+							sendSuccessResponse(w, "Successfully added shop admin", nil)
+							sendMailInsertAdmin(user)
+						}
 					}
 				}
 			}
