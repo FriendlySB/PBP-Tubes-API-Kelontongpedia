@@ -117,6 +117,28 @@ func sendMailInsertAdmin(user model.User) {
 		fmt.Println("Email sent to: ", user.Email)
 	}
 }
+
+func sendMailBanShop(shop model.Shop) {
+	mail := gm.NewMessage()
+
+	template := "bin/template/mailInsertAdmin.html"
+
+	result, _ := parseTemplate(template, shop)
+
+	mail.SetHeader("From", "lamabunta@gmail.com")
+	mail.SetHeader("To", shop.Email)
+	mail.SetHeader("Subject", "Notifications")
+	mail.SetBody("text/html", result)
+
+	sender := gm.NewDialer("smtp.gmail.com", 25, "lamabunta@gmail.com", "gnkglansnfmbshty")
+
+	if err := sender.DialAndSend(mail); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Email sent to: ", shop.Email)
+	}
+}
+
 func parseTemplate(templateFileName string, data interface{}) (string, error) {
 	t, err := template.ParseFiles(templateFileName)
 	if err != nil {

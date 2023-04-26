@@ -95,6 +95,12 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Failed to ban shop")
 		return
 	} else {
+		var shop model.Shop
+    	err = db.QueryRow("SELECT shopName, shopEmail FROM shop WHERE shopId = ?", shopId).Scan(&shop.Name, &shop.Email)
+    	if err != nil {
+       		panic(err.Error())
+    	}
 		sendSuccessResponse(w, "Shop banned", nil)
+		sendMailBanShop(shop)
 	}
 }
