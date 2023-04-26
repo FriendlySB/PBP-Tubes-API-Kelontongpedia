@@ -75,19 +75,11 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 			users = append(users, user)
 		}
 	}
-	for i := 0; i < len(users); i++ {
-		time.Sleep(100 * time.Millisecond)
-		sqlStatement3 := "UPDATE users SET banstatus = 1 WHERE userid =?"
-		_, errQuery := db.Exec(sqlStatement3, users[i].ID)
-		if errQuery != nil {
-			log.Println(errQuery)
-			sendErrorResponse(w, "Failed to ban user")
-			return
-		} else {
-			res := users[i].Name + " is Banned"
-			sendSuccessResponse(w, res, nil)
-			sendMailBanUser(users[i])
+	if len(users) > 1 {
+		for i := 0; i < len(users); i++ {
+			go BanAdminShop(w, users[i])
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	if errQuery != nil {
@@ -96,11 +88,27 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 		return
 	} else {
 		var shop model.Shop
-    	err = db.QueryRow("SELECT shopName, shopEmail FROM shop WHERE shopId = ?", shopId).Scan(&shop.Name, &shop.Email)
-    	if err != nil {
-       		panic(err.Error())
-    	}
+		err = db.QueryRow("SELECT shopName, shopEmail FROM shop WHERE shopId = ?", shopId).Scan(&shop.Name, &shop.Email)
+		if err != nil {
+			panic(err.Error())
+		}
 		sendSuccessResponse(w, "Shop banned", nil)
 		sendMailBanShop(shop)
+	}
+}
+
+func BanAdminShop(w http.ResponseWriter, user model.User) {
+	db := connect()
+	defer db.Close()
+	sqlStatement := "UPDATE users SET banstatus = 1 WHERE userid =?"
+	_, errQuery := db.Exec(sqlStatement, user.ID)
+	if errQuery != nil {
+		log.Println(errQuery)
+		sendErrorResponse(w, "Failed to ban user")
+		return
+	} else {
+		res := user.Name + " is Banned"
+		sendSuccessResponse(w, res, nil)
+		sendMailBanUser(user)
 	}
 }
