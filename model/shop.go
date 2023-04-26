@@ -8,5 +8,5 @@ type Shop struct {
 	Address       string `json:"address"`
 	TelephoneNo   string `json:"telephone"`
 	Email         string `json:"email"`
-	ShopBanStatus bool   `json:"shopbanstatus"`
+	ShopBanStatus bool   `json:"shopbanstatus,omitempty"`
 }

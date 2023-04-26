@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -152,41 +153,48 @@ func RegisterShop(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
+	currentID := getUserIdFromCookie(r)
 	shopname := r.Form.Get("shop_name")
 	shopcategory := r.Form.Get("shop_category")
 	shopaddress := r.Form.Get("shop_address")
 	shoptelephone := r.Form.Get("shop_telephone")
 	shopemail := r.Form.Get("shop_email")
+	inputpassword := r.Form.Get("password")
+	password := GetUserPassword(currentID)
 
-	query := "INSERT INTO shop (shopName,shopReputation,shopCategory,shopAddress,shopTelephone,shopEmail,shopStatus) "
-	query += "VALUES (?,?,?,?,?,?,?)"
-	res, errQuery := db.Exec(query, shopname, 0, shopcategory, shopaddress, shoptelephone, shopemail, 0)
-	if errQuery != nil {
-		log.Println(errQuery)
-		sendErrorResponse(w, "Failed to register shop")
-		return
+	if password != inputpassword {
+		sendErrorResponse(w, "Password does not match")
 	} else {
-		id, _ := res.LastInsertId()
-		shopid := int(id)
-		//Ambil dari cookie
-		userid := 5
-		query = "INSERT INTO shop_admin VALUES(?,?)"
-		_, errQuery2 := db.Exec(query, shopid, userid)
-		if errQuery2 != nil {
-			log.Println(errQuery2)
+		query := "INSERT INTO shop (shopName,shopReputation,shopCategory,shopAddress,shopTelephone,shopEmail,shopStatus) "
+		query += "VALUES (?,?,?,?,?,?,?)"
+		res, errQuery := db.Exec(query, shopname, 0, shopcategory, shopaddress, shoptelephone, shopemail, 0)
+		if errQuery != nil {
+			log.Println(errQuery)
 			sendErrorResponse(w, "Failed to register shop")
+			return
 		} else {
-			var user model.User
-            errQuery3 := db.QueryRow("SELECT u.userid, u.name, u.email FROM users u INNER JOIN shop_admin sa ON sa.userId = u.userid INNER JOIN shop s ON s.shopId=sa.shopId WHERE u.userid = ?", userid).Scan(&user.ID, &user.Name, &user.Email)
-			if errQuery3 != nil {
-                log.Println(errQuery3)
-                sendErrorResponse(w, "Failed to register shop")
-            } else {
-                sendSuccessResponse(w, "Successfully registered shop", nil)
-				sendMailRegisShop(user, shopemail)
-            }
-		}
+			id, _ := res.LastInsertId()
+			shopid := int(id)
+			//Ambil dari cookie
+			userid := 5
+			query = "INSERT INTO shop_admin VALUES(?,?)"
+			_, errQuery2 := db.Exec(query, shopid, userid)
+			if errQuery2 != nil {
+				log.Println(errQuery2)
+				sendErrorResponse(w, "Failed to register shop")
+			} else {
+				var user model.User
+				errQuery3 := db.QueryRow("SELECT u.userid, u.name, u.email FROM users u INNER JOIN shop_admin sa ON sa.userId = u.userid INNER JOIN shop s ON s.shopId=sa.shopId WHERE u.userid = ?", userid).Scan(&user.ID, &user.Name, &user.Email)
+				if errQuery3 != nil {
+					log.Println(errQuery3)
+					sendErrorResponse(w, "Failed to register shop")
+				} else {
+					sendSuccessResponse(w, "Successfully registered shop", nil)
+					sendMailRegisShop(user, shopemail)
+				}
+			}
 
+		}
 	}
 }
 func InsertShopAdmin(w http.ResponseWriter, r *http.Request) {
@@ -226,7 +234,7 @@ func InsertShopAdmin(w http.ResponseWriter, r *http.Request) {
 						sendErrorResponse(w, "Failed to add shop admin")
 					} else {
 						var user model.User
-            			errQuery := db.QueryRow("SELECT u.userid,u.name,u.email FROM shop_admin sa INNER JOIN users u ON sa.userId=u.userid WHERE sa.shopId=? AND u.userid=?", shopid, userid).Scan(&user.ID, &user.Name, &user.Email)
+						errQuery := db.QueryRow("SELECT u.userid,u.name,u.email FROM shop_admin sa INNER JOIN users u ON sa.userId=u.userid WHERE sa.shopId=? AND u.userid=?", shopid, userid).Scan(&user.ID, &user.Name, &user.Email)
 						if errQuery != nil {
 							log.Println(errQuery)
 							sendErrorResponse(w, "Failed to register shop")
@@ -239,4 +247,36 @@ func InsertShopAdmin(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+func GetUserShop(w http.ResponseWriter, r *http.Request) {
+	db := connect()
+	defer db.Close()
+
+	currentID := getUserIdFromCookie(r)
+
+	query := "SELECT shop.shopid,shopname,shopreputation,shopcategory,shopaddress,shoptelephone,shopemail FROM shop "
+	query += "INNER JOIN shop_admin ON shop.shopid = shop_admin.shopid "
+	query += "WHERE shop_admin.userid = " + strconv.Itoa(currentID)
+	rows, err := db.Query(query)
+
+	if err != nil {
+		log.Println(err)
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
+	var shop model.Shop
+	var shopList []model.Shop
+	for rows.Next() {
+		if err := rows.Scan(&shop.ID, &shop.Name, &shop.Reputation, &shop.Category, &shop.Address, &shop.TelephoneNo, &shop.Email); err != nil {
+			log.Println(err)
+			sendErrorResponse(w, "Something went wrong, please try again")
+			return
+		} else {
+			if !shop.ShopBanStatus {
+				shopList = append(shopList, shop)
+			}
+
+		}
+	}
+	sendSuccessResponse(w, "Success", shopList)
 }
