@@ -59,6 +59,7 @@ func main() {
 	router.HandleFunc("/logout", controller.Logout).Methods("POST")
 	router.HandleFunc("/register", controller.RegisterUser).Methods("POST")
 	router.HandleFunc("/password", controller.ChangePassword).Methods("PUT")
+	router.HandleFunc("/registerseller", controller.RegisterSeller).Methods("PUT")
 
 	router.HandleFunc("/cart", controller.GetCart).Methods("GET")
 	router.HandleFunc("/cart", controller.InsertItemToCart).Methods("POST")
@@ -71,6 +72,7 @@ func main() {
 	router.HandleFunc("/item/{item_id}", controller.DeleteItem).Methods("Delete")
 
 	router.HandleFunc("/shop", controller.GetShopProfile).Methods("GET")
+	router.HandleFunc("/shoplist", controller.GetUserShop).Methods("GET")
 	router.HandleFunc("/shop", controller.RegisterShop).Methods("POST")
 	router.HandleFunc("/shop/{shop_id}", controller.UpdateShopProfile).Methods("PUT")
 	router.HandleFunc("/shop_admin", controller.InsertShopAdmin).Methods("POST")

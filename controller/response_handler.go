@@ -14,6 +14,14 @@ func sendErrorResponse(w http.ResponseWriter, message string) {
 	json.NewEncoder(w).Encode(response)
 }
 
+func sendUnauthorizedResponse(w http.ResponseWriter) {
+	var response model.ErrorResponse
+	response.Status = 401
+	response.Message = "Unauthorized Access"
+	w.Header().Set("Content=Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
 func sendSuccessResponse(w http.ResponseWriter, message string, value interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	var response model.GenericResponse

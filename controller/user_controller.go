@@ -3,7 +3,6 @@ package controller
 import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -72,12 +71,12 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	telephoneNo := r.Form.Get("telephone")
 
 	user := model.User{
-        Name:        name,
-        Email:       email,
-        Address:     address,
-        TelephoneNo: telephoneNo,
-    }
-	
+		Name:        name,
+		Email:       email,
+		Address:     address,
+		TelephoneNo: telephoneNo,
+	}
+
 	res, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
 		name,
 		email,
@@ -115,29 +114,15 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	//Ambil password lama dan baru dari form
 	oldpassword := r.Form.Get("old_password")
 	newpassword := r.Form.Get("new_password")
-	//Password lama user dari database untuk dibandingkan
-	var password string
 
 	//User id ambil pakai cookie
-	userid := 3
+	userid := getUserIdFromCookie(r)
 
-	query := "SELECT password FROM users WHERE userid = " + strconv.Itoa(userid)
-	rows, err := db.Query(query)
-	if err != nil {
-		log.Println(err)
-		sendErrorResponse(w, "Something went wrong, please try again")
-		return
-	}
+	//Password lama user dari database untuk dibandingkan
+	var password = GetUserPassword(userid)
 
-	for rows.Next() {
-		if err := rows.Scan(&password); err != nil {
-			log.Println(err)
-			sendErrorResponse(w, "Error result scan")
-			return
-		}
-	}
 	if password == oldpassword {
-		query = "UPDATE users SET password = '" + newpassword + "' WHERE userid = " + strconv.Itoa(userid)
+		query := "UPDATE users SET password = '" + newpassword + "' WHERE userid = " + strconv.Itoa(userid)
 		_, errQuery := db.Exec(query)
 
 		if errQuery != nil {
@@ -154,50 +139,38 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 
-	currentID := getUserIdFromCookie(r)
+	query := "SELECT userid, name, email, address, telpNo FROM users"
+	name := r.URL.Query()["name"]
+	userid := r.URL.Query()["userid"]
+	if name != nil {
+		query += " WHERE name='" + name[0] + "'"
+	}
+	if userid != nil {
+		query += " WHERE userid=" + userid[0]
+	}
 
-	if currentID == -1 {
-		sendUnauthorizedResponse(w)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Fatal(err)
+		sendErrorResponse(w, "Error")
 	} else {
-		query := "SELECT userid, name, email, address, telpNo FROM users"
-		name := r.URL.Query()["name"]
-		userid := r.URL.Query()["userid"]
-		if name != nil {
-			query += " WHERE name='" + name[0] + "'"
-		}
-		if userid != nil {
-			query += " WHERE userid=" + userid[0]
-		}
-
-		rows, err := db.Query(query)
-		if err != nil {
-			log.Fatal(err)
-			sendErrorResponse(w, "Error")
-		} else {
-			var user model.User
-			var users []model.User
-			for rows.Next() {
-				if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
-					sendErrorResponse(w, "Error while scanning rows")
-					return
-				} else {
-					users = append(users, user)
-				}
-			}
-			var response model.GenericResponse
-			w.Header().Set("Content=Type", "application/json")
-			if err == nil {
-				response.Status = 200
-				response.Message = "Success"
-				response.Data = users
-				json.NewEncoder(w).Encode(response)
+		var user model.User
+		var users []model.User
+		for rows.Next() {
+			if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
+				sendErrorResponse(w, "Error while scanning rows")
+				return
 			} else {
-				response.Status = 400
-				response.Message = "Error"
-				json.NewEncoder(w).Encode(response)
+				users = append(users, user)
 			}
+		}
+		if err == nil {
+			sendSuccessResponse(w, "Success", users)
+		} else {
+			sendErrorResponse(w, "Error")
 		}
 	}
+
 }
 
 func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
@@ -206,60 +179,63 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 	currentID := getUserIdFromCookie(r)
 
-	if currentID == -1 {
-		sendUnauthorizedResponse(w)
-	} else {
-		err := r.ParseForm()
+	err := r.ParseForm()
+	if err != nil {
+		sendErrorResponse(w, "Error while parsing form")
+		return
+	}
+	name := r.Form.Get("name")
+	email := r.Form.Get("email")
+	address := r.Form.Get("address")
+	telpNo := r.Form.Get("telpNo")
+
+	_, errQuery := db.Exec("UPDATE users SET name=?, email=?, address=?, telpNo=? WHERE userid=?", name, email, address, telpNo, currentID)
+
+	if errQuery == nil {
+		rows, err := db.Query("SELECT userid, name, email, address, telpNo FROM users WHERE userid = ?", currentID)
 		if err != nil {
-			sendErrorResponse(w, "Error while parsing form")
+			sendErrorResponse(w, "Error while fetching updated data")
 			return
 		}
-		name := r.Form.Get("name")
-		email := r.Form.Get("email")
-		address := r.Form.Get("address")
-		telpNo := r.Form.Get("telpNo")
+		defer rows.Close()
 
-		_, errQuery := db.Exec("UPDATE users SET name=?, email=?, address=?, telpNo=? WHERE userid=?", name, email, address, telpNo, currentID)
-
-		if errQuery == nil {
-			rows, err := db.Query("SELECT userid, name, email, address, telpNo FROM users WHERE userid = ?", currentID)
-			if err != nil {
-				sendErrorResponse(w, "Error while fetching updated data")
+		var user model.User
+		for rows.Next() {
+			if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
+				sendErrorResponse(w, "Error while scanning rows")
 				return
 			}
-			defer rows.Close()
-
-			var user model.User
-			for rows.Next() {
-				if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
-					sendErrorResponse(w, "Error while scanning rows")
-					return
-				}
-			}
-			response := model.GenericResponse{Status: 200, Message: "Success", Data: user}
-			json.NewEncoder(w).Encode(response)
-		} else {
-			response := model.GenericResponse{Status: 400, Message: "Error"}
-			json.NewEncoder(w).Encode(response)
 		}
+		sendSuccessResponse(w, "Profile updated", user)
+	} else {
+		sendErrorResponse(w, "Failed to update profile")
 	}
+
 }
 
-func RegisterPenjual(w http.ResponseWriter, r *http.Request) {
+func RegisterSeller(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 
 	currentID := getUserIdFromCookie(r)
 
-	if currentID == -1 {
-		sendUnauthorizedResponse(w)
+	err := r.ParseForm()
+	if err != nil {
+		sendErrorResponse(w, "Error while parsing form")
+		return
+	}
+	//Kasih peringatan kalau penjual akses ini karena mereka adalah penjual
+	if getUserTypeFromCookie(r) == 2 {
+		sendErrorResponse(w, "User is already a seller")
+		return
+	}
+	inputpassword := r.Form.Get("password")
+	password := GetUserPassword(currentID)
+
+	if inputpassword != password {
+		sendErrorResponse(w, "Password does not match")
 	} else {
-		err := r.ParseForm()
-		if err != nil {
-			sendErrorResponse(w, "Error while parsing form")
-			return
-		}
-		_, errQuery := db.Exec("UPDATE users SET usertype = ? WHERE userid=?", 2, currentID)
+		_, errQuery := db.Exec("UPDATE users SET usertype = ? WHERE userid = ?", 2, currentID)
 
 		if errQuery != nil {
 			sendErrorResponse(w, "Failed to register the user as a seller")
@@ -267,4 +243,25 @@ func RegisterPenjual(w http.ResponseWriter, r *http.Request) {
 			sendSuccessResponse(w, "Successfully registered the user as a seller", nil)
 		}
 	}
+}
+
+func GetUserPassword(id int) string {
+	db := connect()
+	defer db.Close()
+
+	var password string
+	query := "SELECT password FROM users WHERE userid = " + strconv.Itoa(id)
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+
+	for rows.Next() {
+		if err := rows.Scan(&password); err != nil {
+			log.Println(err)
+			return ""
+		}
+	}
+	return password
 }

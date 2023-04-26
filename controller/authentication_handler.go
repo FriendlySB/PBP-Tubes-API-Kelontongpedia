@@ -2,7 +2,6 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -52,7 +51,7 @@ func Authenticate(next http.HandlerFunc, accesstype int) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		isValidToken := validateUserToken(r, accesstype)
 		if !isValidToken {
-			//sendUnauthorizedResponse(w)
+			sendUnauthorizedResponse(w)
 		} else {
 			next.ServeHTTP(w, r)
 		}
@@ -65,6 +64,12 @@ func validateUserToken(r *http.Request, accessType int) bool {
 
 	if isAccessTokenValid {
 		isUserValid := usertype == accessType
+		//Cek tipe penjual(2)
+		//Kalau accesstype = 1 (Pembeli), penjual juga bisa akses (usertype = 2)
+		//Tapi tidak vice versa
+		if accessType == 1 && usertype == 2 {
+			isUserValid = true
+		}
 		if isUserValid {
 			return true
 		}
@@ -84,15 +89,6 @@ func validateTokenFromCookies(r *http.Request) (bool, int, string, int) {
 	}
 	return false, -1, "", -1
 }
-
-func sendUnauthorizedResponse(w http.ResponseWriter) {
-	var response model.ErrorResponse
-	response.Status = 401
-	response.Message = "Unauthorized Access"
-	w.Header().Set("Content=Type", "application/json")
-	json.NewEncoder(w).Encode(response)
-}
-
 func getUserIdFromCookie(r *http.Request) int {
 	if cookie, err := r.Cookie(tokenName); err == nil {
 		jwtToken := cookie.Value
@@ -102,6 +98,20 @@ func getUserIdFromCookie(r *http.Request) int {
 		})
 		if err == nil && parsedToken.Valid {
 			return accessClaims.ID
+		}
+	}
+	return -1
+}
+
+func getUserTypeFromCookie(r *http.Request) int {
+	if cookie, err := r.Cookie(tokenName); err == nil {
+		jwtToken := cookie.Value
+		accessClaims := &model.Claim{}
+		parsedToken, err := jwt.ParseWithClaims(jwtToken, accessClaims, func(accessToken *jwt.Token) (interface{}, error) {
+			return jwtKey, nil
+		})
+		if err == nil && parsedToken.Valid {
+			return accessClaims.UserType
 		}
 	}
 	return -1
