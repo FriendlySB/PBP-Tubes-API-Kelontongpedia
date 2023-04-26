@@ -4,6 +4,7 @@ import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -35,7 +36,8 @@ func BanUser(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		sendSuccessResponse(w, "User banned", nil)
+		res := user.Name + " is Banned"
+		sendSuccessResponse(w, res, nil)
 		sendMailBanUser(user)
 	}
 }
@@ -74,6 +76,7 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for i := 0; i < len(users); i++ {
+		time.Sleep(100 * time.Millisecond)
 		sqlStatement3 := "UPDATE users SET banstatus = 1 WHERE userid =?"
 		_, errQuery := db.Exec(sqlStatement3, users[i].ID)
 		if errQuery != nil {
@@ -81,7 +84,8 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 			sendErrorResponse(w, "Failed to ban user")
 			return
 		} else {
-			sendSuccessResponse(w, "User banned", nil)
+			res := users[i].Name + " is Banned"
+			sendSuccessResponse(w, res, nil)
 			sendMailBanUser(users[i])
 		}
 	}
