@@ -13,7 +13,6 @@ import (
 
 func main() {
 	router := mux.NewRouter()
-
 	//List End Points
 	/*
 		//Untuk database
@@ -54,6 +53,9 @@ func main() {
 		2. BanToko
 		3. GetAllUser
 	*/
+
+	//Scheduler
+	controller.SetMonthlyReportScheduler()
 
 	router.HandleFunc("/login", controller.Login).Methods("POST")
 	router.HandleFunc("/logout", controller.Logout).Methods("POST")
