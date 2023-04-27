@@ -4,6 +4,7 @@ import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"bytes"
 	"fmt"
+	"strconv"
 	"text/template"
 
 	gm "gopkg.in/gomail.v2"
@@ -136,6 +137,31 @@ func sendMailBanShop(shop model.Shop) {
 		fmt.Println(err)
 	} else {
 		fmt.Println("Email sent to: ", shop.Email)
+	}
+}
+
+func sendMailMonthlyReport(transactionCount int, productSold int, income int, email string) {
+	mail := gm.NewMessage()
+
+	mail.SetHeader("From", "kelontongpedia23@gmail.com")
+	mail.SetHeader("To", email)
+	mail.SetHeader("Subject", "Monthly Report")
+	body := "<h1>Monthly Shop Report</h1>"
+	body += "<h2>Hello there</h2>"
+	body += "<p>This is your shop's monthly report which includes the following:</p>"
+	body += "<ul><li>Number of Transactions: " + strconv.Itoa(transactionCount) + "</li>"
+	body += "<li>Number of Products Sold: " + strconv.Itoa(productSold) + "</li>"
+	body += "<li>Total Income: " + strconv.Itoa(income) + "</li></ul>"
+	body += "<p>Best regards,</p>"
+	body += "<p>Kelontongpedia Team</p>"
+	mail.SetBody("text/html", body)
+
+	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia23@gmail.com", "vdfsiejrvbjrpnyg")
+
+	if err := sender.DialAndSend(mail); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("Email sent to: ", email)
 	}
 }
 
