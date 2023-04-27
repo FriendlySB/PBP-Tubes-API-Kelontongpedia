@@ -158,11 +158,17 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 			fmt.Println(errQuery)
 			sendErrorResponse(w, "Failed to record transaction")
 		} else {
-			sendSuccessResponse(w, "Transaction recorded", nil)
+			boolStock := reduceStock(itemIds[i], quantity)
+			if boolStock {
+				sendSuccessResponse(w, "Transaction recorded", nil)
+			} else {
+				sendErrorResponse(w, "Failed to Update Stock")
+			}
 		}
 
 	}
 }
+
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
@@ -188,6 +194,25 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		sendSuccessResponse(w, "Progress updated", nil)
 	}
 }
-func ReduceStock() {
+func reduceStock(itemId string, quantity int) bool {
 	//Reduce stock produk setelah transaksi sukses
+	db := connect()
+	defer db.Close()
+	query := "SELECT itemStock FROM item WHERE itemId =?"
+	row := db.QueryRow(query, itemId)
+	var stock int
+	if err := row.Scan(&stock); err != nil {
+		return false
+	}
+	stock = stock - quantity
+	_, errQuery := db.Exec("UPDATE item SET itemStock = ? WHERE itemId=?",
+		stock,
+		itemId,
+	)
+	if errQuery != nil {
+		return false
+	} else {
+		return true
+	}
+
 }
