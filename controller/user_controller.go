@@ -54,8 +54,15 @@ func Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	resetUserToken(w)
-	sendSuccessResponse(w, "Logout Success", nil)
+	//User id ambil pakai cookie
+	userid := getUserIdFromCookie(r)
+	if userid == -1 {
+		sendErrorResponse(w, "Tidak ada aktivitas login sebelumnya")
+	} else {
+		resetUserToken(w)
+		sendSuccessResponse(w, "Logout Success", nil)
+	}
+
 }
 
 // fungsi untuk register user
