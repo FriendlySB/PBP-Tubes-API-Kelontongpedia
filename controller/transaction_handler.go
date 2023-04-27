@@ -2,6 +2,7 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,12 +16,8 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 	//baca userID dari cookie
-	_, UserID, _, _ := validateTokenFromCookies(r)
-	//jika user belum login, maka akan direturn unauthorized response
-	if UserID == -1 {
-		sendUnauthorizedResponse(w)
-		return
-	}
+	UserID := getUserIdFromCookie(r)
+
 	//baca dari Query Param
 	transactionId := r.URL.Query()["transaction_id"]
 	shopId := r.URL.Query()["shop_id"]
@@ -35,27 +32,29 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		//jika ada shopId, maka id user yang mengakses harus dicek, apakah terdaftar di daftar admin toko.
-		var check bool
-		query2 := "select * from shop_admin WHERE shopId=? AND userId=?"
+		query2 := "SELECT userid from shop_admin WHERE shopId =? AND userId=?"
 		row2 := db.QueryRow(query2, shopId[0], UserID)
-		err2 := row2.Scan(&check)
-		//jika terjadi eror saat mengecek
-		if err2 != nil {
-			sendErrorResponse(w, "Error checking shop admin")
-			return
-		}
-		//jika user bukan admin toko, maka akan direturn unauthorized response
-		if !check {
+		//jika terjadi error saat mengecek, berarti user yg mengakses bukan admin toko ini dan beri
+		//unauthorized access
+		var temp int
+		switch err := row2.Scan(&temp); err {
+		case sql.ErrNoRows:
 			sendUnauthorizedResponse(w)
 			return
+		case nil:
+
+		default:
+			sendErrorResponse(w, "Error")
+			return
 		}
-		//disini harusnya query transaksi apa saja yang terjadi di toko berdasarkan shopId, tapi belum beres
-		query = " INNER JOIN transaction_detail td ON t.`transactionId` = td.`transactionId` INNER JOIN item i ON td.itemId = i.itemId WHERE i.shopId ='" + shopId[0] + "'"
+		//dDsini query transaksi apa saja yang terjadi di toko berdasarkan shopId
+		query += " INNER JOIN transaction_detail td ON t.`transactionId` = td.`transactionId` INNER JOIN item i ON td.itemId = i.itemId WHERE i.shopId ='" + shopId[0] + "'"
 		if transactionId != nil {
 			query += " AND transactionId='" + transactionId[0] + "'"
 		}
 		query += " GROUP BY t.`transactionId`;"
 	}
+	fmt.Println(query)
 	//eksekusi query mencari transaksi apa saja yang ada
 	rows, err := db.Query(query)
 	if err != nil {
@@ -73,6 +72,16 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 			return
 		} else {
 			transactions = append(transactions, transaction)
+		}
+	}
+	//Kalau query transaksi kosong, ini berarti user yg mengakses bukan pemilik transaksi ini
+	//dan beri unauthorized access
+	if len(transactions) == 0 {
+		if transactionId != nil {
+			if transactionId[0] != "" {
+				sendUnauthorizedResponse(w)
+				return
+			}
 		}
 	}
 	//query setiap item yang ada di transaksi tersebut
@@ -100,14 +109,6 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 		}
 		transactions[i].TransactionDetail = transactionDetails
 	}
-	//dikomen dulu karena blm dicek lagi
-	//biar kalau ada transaksi yang detail transaksinya null dihapus
-	// var filteredTransactions []model.Transaction
-	// for _, v := range transactions {
-	// 	if v.TransactionDetail != nil {
-	// 		filteredTransactions = append(filteredTransactions, v)
-	// 	}
-	// }
 	sendSuccessResponse(w, "Success", transactions)
 }
 
@@ -131,6 +132,32 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 	if len(itemIds) != len(quantities) {
 		sendErrorResponse(w, "Number of itemId does not match quantity")
 		return
+	}
+	for i := 0; i < len(itemIds); i++ {
+		//cek stok terlebih dahulu dengan query stok item yang akan diedit
+		query := "SELECT itemStock FROM item WHERE itemId='" + itemIds[i] + "'"
+		rows, err := db.Query(query)
+		if err != nil {
+			log.Println(err)
+			sendErrorResponse(w, "Something went wrong, please try again")
+			return
+		}
+
+		var dbstock int
+		for rows.Next() {
+			if err := rows.Scan(&dbstock); err != nil {
+				log.Println(err)
+				sendErrorResponse(w, "Error result scan")
+				return
+			}
+		}
+		//jika stok < quantity, maka akan direturn pesan eror
+		//1 produk transaksi tidak cukup stoknya, transaksi tidak dapar dilakukan
+		stock, _ := strconv.Atoi(quantities[i])
+		if dbstock < stock {
+			sendErrorResponse(w, "Product stock is not enough")
+			return
+		}
 	}
 	//Insert transaksi baru
 	res, errQuery := db.Exec("INSERT INTO transaction(userId,address,delivery,paymentType)values(?,?,?,?)",
@@ -181,9 +208,7 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	transId := vars["transaction_id"]
 	progress := r.Form.Get("progress")
-	sqlStatement := `Update transaction
-	SET progress = ?
-	where ID =?`
+	sqlStatement := "UPDATE transaction SET progress = ? WHERE transactionID =?"
 
 	_, errQuery := db.Exec(sqlStatement, progress, transId)
 
@@ -191,9 +216,10 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Failed to update transaction")
 		return
 	} else {
-		sendSuccessResponse(w, "Progress updated", nil)
+		sendSuccessResponse(w, "Transaction progress updated", nil)
 	}
 }
+
 func reduceStock(itemId string, quantity int) bool {
 	//Reduce stock produk setelah transaksi sukses
 	db := connect()

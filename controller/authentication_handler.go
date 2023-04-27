@@ -2,7 +2,6 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -62,8 +61,8 @@ func Authenticate(next http.HandlerFunc, accesstype int) http.HandlerFunc {
 }
 
 func validateUserToken(r *http.Request, accessType int) bool {
-	isAccessTokenValid, id, name, usertype := validateTokenFromCookies(r)
-	fmt.Println(id, name, usertype, accessType, isAccessTokenValid)
+	isAccessTokenValid, _, _, usertype := validateTokenFromCookies(r)
+	//fmt.Println(id, name, usertype, accessType, isAccessTokenValid)
 
 	if isAccessTokenValid {
 		isUserValid := usertype == accessType

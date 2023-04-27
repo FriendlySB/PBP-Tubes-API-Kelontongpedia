@@ -2,6 +2,7 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"database/sql"
 	"log"
 	"net/http"
 	"strings"
@@ -94,10 +95,29 @@ func InsertItem(w http.ResponseWriter, r *http.Request) {
 	itemprice := r.Form.Get("item_price")
 	itemstock := r.Form.Get("item_stock")
 
+	UserID := getUserIdFromCookie(r)
+	//Cek penjual yang akses ini admin toko yang bersangkutan atau bukan. Jika bukan, unauthorized
+	query2 := "SELECT userid from shop_admin WHERE shopId =? AND userId=?"
+	row2 := db.QueryRow(query2, shopid, UserID)
+	//jika terjadi error saat mengecek, berarti user yg mengakses bukan admin toko ini dan beri
+	//unauthorized access
+	var temp int
+	switch err := row2.Scan(&temp); err {
+	case sql.ErrNoRows:
+		sendUnauthorizedResponse(w)
+		return
+	case nil:
+
+	default:
+		sendErrorResponse(w, "Error")
+		return
+	}
+
 	query := "INSERT INTO item (shopid,itemname,itemdesc,itemcategory,itemprice,itemstock) VALUES (?,?,?,?,?,?)"
 	_, errQuery := db.Exec(query, shopid, itemname, itemdesc, itemcategory, itemprice, itemstock)
 
 	if errQuery != nil {
+		log.Println(err)
 		sendErrorResponse(w, "Failed to add new item")
 		return
 	} else {
@@ -122,6 +142,25 @@ func UpdateItem(w http.ResponseWriter, r *http.Request) {
 	itemcategory := r.Form.Get("item_category")
 	itemprice := r.Form.Get("item_price")
 	itemstock := r.Form.Get("item_stock")
+
+	UserID := getUserIdFromCookie(r)
+	shopid := CheckItemShop(itemid)
+	//Cek penjual yang akses ini admin toko yang bersangkutan atau bukan. Jika bukan, unauthorized
+	query2 := "SELECT userid from shop_admin WHERE shopId =? AND userId=?"
+	row2 := db.QueryRow(query2, shopid, UserID)
+	//jika terjadi error saat mengecek, berarti user yg mengakses bukan admin toko ini dan beri
+	//unauthorized access
+	var temp int
+	switch err := row2.Scan(&temp); err {
+	case sql.ErrNoRows:
+		sendUnauthorizedResponse(w)
+		return
+	case nil:
+
+	default:
+		sendErrorResponse(w, "Error")
+		return
+	}
 
 	query := "UPDATE item SET "
 	if itemname != "" {
@@ -170,6 +209,25 @@ func DeleteItem(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	itemid := vars["item_id"]
 
+	UserID := getUserIdFromCookie(r)
+	shopid := CheckItemShop(itemid)
+	//Cek penjual yang akses ini admin toko yang bersangkutan atau bukan. Jika bukan, unauthorized
+	query2 := "SELECT userid from shop_admin WHERE shopId =? AND userId=?"
+	row2 := db.QueryRow(query2, shopid, UserID)
+	//jika terjadi error saat mengecek, berarti user yg mengakses bukan admin toko ini dan beri
+	//unauthorized access
+	var temp int
+	switch err := row2.Scan(&temp); err {
+	case sql.ErrNoRows:
+		sendUnauthorizedResponse(w)
+		return
+	case nil:
+
+	default:
+		sendErrorResponse(w, "Error")
+		return
+	}
+
 	query := "DELETE FROM item WHERE itemid = " + itemid
 	result, errQuery := db.Exec(query)
 	if errQuery != nil {
@@ -183,5 +241,22 @@ func DeleteItem(w http.ResponseWriter, r *http.Request) {
 		} else {
 			sendSuccessResponse(w, "Successfully deleted item", nil)
 		}
+	}
+}
+
+func CheckItemShop(itemid string) int {
+	db := connect()
+	defer db.Close()
+
+	query := "SELECT shopid FROM shop WHERE itemid =?"
+	row := db.QueryRow(query, itemid)
+	var shopid int
+	switch err := row.Scan(&shopid); err {
+	case sql.ErrNoRows:
+		return -1
+	case nil:
+		return shopid
+	default:
+		return -1
 	}
 }
