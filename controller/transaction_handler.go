@@ -128,8 +128,12 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Failed")
 		return
 	}
-	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
-	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
+	itemIds := r.Form["itemId"]
+	quantities := r.Form["quantity"]
+	if len(itemIds) != len(quantities) {
+		sendErrorResponse(w, "Jumlah ItemId tidak sama dengan Quantity")
+		return
+	}
 
 	var transaction model.Transaction
 	//Insert transaksi baru
@@ -140,22 +144,29 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 	if errQuery != nil {
 		sendErrorResponse(w, "gagal insert transaksi")
 		return
-	} else {
-		//insert ke detail transaksi
-		_, errQuery := db.Exec("INSERT INTO transaction_detail(transactionId,itemId,quantity)values(?,?,?)",
-			transaction.ID,
-			itemId,
-			quantity,
-		)
-		var transactionDetail model.TransactionDetail
-		transactionDetail.Item.ID = itemId
-		transactionDetail.Quantity = quantity
-		transaction.TransactionDetail = append(transaction.TransactionDetail, transactionDetail)
-		if errQuery != nil {
-			fmt.Println(errQuery)
-			sendErrorResponse(w, "gagal insert item ke transaksi")
-		} else {
-			sendSuccessResponse(w, "Insert item ke transaksi berhasil", transaction)
+		for i, itemId := range itemIds {
+			quantity, err := strconv.Atoi(quantities[i])
+			if err != nil {
+				sendErrorResponse(w, "Invalid quantity")
+				return
+			}
+			//insert ke detail transaksi
+			_, errQuery := db.Exec("INSERT INTO transaction_detail(transactionId,itemId,quantity)values(?,?,?)",
+				transaction.ID,
+				itemId,
+				quantity,
+			)
+			var transactionDetail model.TransactionDetail
+			//broken disini
+			transactionDetail.Item.ID = itemId
+			transactionDetail.Quantity = quantity
+			transaction.TransactionDetail = append(transaction.TransactionDetail, transactionDetail)
+			if errQuery != nil {
+				fmt.Println(errQuery)
+				sendErrorResponse(w, "gagal insert item ke transaksi")
+			} else {
+				sendSuccessResponse(w, "Insert item ke transaksi berhasil", transaction)
+			}
 		}
 	}
 }
