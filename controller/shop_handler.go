@@ -2,6 +2,8 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"crypto/sha256"
+	"encoding/hex"
 	"database/sql"
 	"fmt"
 	"log"
@@ -171,7 +173,10 @@ func RegisterShop(w http.ResponseWriter, r *http.Request) {
 	inputpassword := r.Form.Get("password")
 	password := GetUserPassword(currentID)
 
-	if password != inputpassword {
+	hash := sha256.Sum256([]byte(inputpassword))
+	passwordHash := hex.EncodeToString(hash[:])
+
+	if password != passwordHash {
 		sendErrorResponse(w, "Password does not match")
 	} else {
 		query := "INSERT INTO shop (shopName,shopReputation,shopCategory,shopAddress,shopTelephone,shopEmail,shopStatus) "

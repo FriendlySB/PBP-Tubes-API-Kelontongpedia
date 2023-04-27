@@ -2,7 +2,9 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strconv"
@@ -19,38 +21,48 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Failed")
 		return
 	}
+
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
 
-	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + password + "'"
+	if email == "" || password == "" {
+		sendErrorResponse(w, "Masih terdapat input kosong")
+		return
+	}
+
+	hash := sha256.Sum256([]byte(password))
+	passwordHash := hex.EncodeToString(hash[:])
+
+	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + passwordHash + "'"
 	var user model.User
 	err1 := db.QueryRow(query).Scan(&user.ID, &user.Name, &user.UserType)
 
 	if err1 != nil {
 		if err1 == sql.ErrNoRows {
-			sendErrorResponse(w, "Invalid email or password")
+			sendErrorResponse(w, "Email atau Password salah")
 			return
 		}
 		log.Println(err1)
-		sendErrorResponse(w, "Something went wrong, please try again")
+		sendErrorResponse(w, "Terjadi Error")
 		return
+	} else {
+		generateToken(w, user.ID, user.Name, user.UserType)
+		sendSuccessResponse(w, "Login Success", nil)
+		//sendMailLogin(user2)
 	}
-	query2 := "SELECT userid, name, email FROM users WHERE Email ='" + email + "' && Password='" + password + "'"
-	var user2 model.User
-	err2 := db.QueryRow(query2).Scan(&user2.ID, &user2.Name, &user2.Email)
-	if err2 != nil {
-		log.Println(err2)
-		sendErrorResponse(w, "Something went wrong, please try again")
-		return
-	}
-	generateToken(w, user.ID, user.Name, user.UserType)
-	sendSuccessResponse(w, "Login Success", nil)
-	//sendMailLogin(user2)
+
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
-	resetUserToken(w)
-	sendSuccessResponse(w, "Logout Success", nil)
+	//User id ambil pakai cookie
+	userid := getUserIdFromCookie(r)
+	if userid == -1 {
+		sendErrorResponse(w, "Tidak ada aktivitas login sebelumnya")
+	} else {
+		resetUserToken(w)
+		sendSuccessResponse(w, "Logout Success", nil)
+	}
+
 }
 
 // fungsi untuk register user
@@ -70,35 +82,52 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	address := r.Form.Get("address")
 	telephoneNo := r.Form.Get("telephone")
 
+	if name == "" || email == "" || password == "" || address == "" || telephoneNo == "" {
+		sendErrorResponse(w, "Masih terdapat input kosong")
+		return
+	}
+
+	hash := sha256.Sum256([]byte(password))
+	passwordHash := hex.EncodeToString(hash[:])
+
 	user := model.User{
 		Name:        name,
 		Email:       email,
+		Password:    passwordHash,
 		Address:     address,
 		TelephoneNo: telephoneNo,
 	}
 
-	res, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
-		name,
-		email,
-		password,
-		address,
-		telephoneNo,
-	)
+	query := "SELECT userid FROM USERS WHERE Email ='" + email + "'"
+	err1 := db.QueryRow(query).Scan(&user.ID)
+	if err1 != nil {
+		if err1 == sql.ErrNoRows {
+			res1, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
+				user.Name,
+				user.Email,
+				user.Password,
+				user.Address,
+				user.TelephoneNo,
+			)
 
-	if errQuery != nil {
-		log.Println(errQuery)
-		sendErrorResponse(w, "Register Gagal")
-	} else {
-		id, _ := res.LastInsertId()
-		_, errQuery2 := db.Exec("INSERT INTO CART (userid) VALUES (?)", id)
-		if errQuery2 != nil {
-			log.Println(errQuery)
-			sendErrorResponse(w, "Register Gagal")
-		} else {
-			sendSuccessResponse(w, "Register Berhasil", nil)
+			if errQuery != nil {
+				log.Println(errQuery)
+				sendErrorResponse(w, "Register Gagal")
+			} else {
+				id, _ := res1.LastInsertId()
+				_, errQuery2 := db.Exec("INSERT INTO CART (userid) VALUES (?)", id)
+				if errQuery2 != nil {
+					log.Println(errQuery)
+					sendErrorResponse(w, "Register Gagal")
+				} else {
+					sendSuccessResponse(w, "Register Berhasil", nil)
+					sendMailRegis(user)
+				}
+			}
 		}
+	} else {
+		sendErrorResponse(w, "Email sudah terdaftar")
 	}
-	sendMailRegis(user)
 }
 
 func ChangePassword(w http.ResponseWriter, r *http.Request) {
@@ -121,8 +150,15 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	//Password lama user dari database untuk dibandingkan
 	var password = GetUserPassword(userid)
 
-	if password == oldpassword {
-		query := "UPDATE users SET password = '" + newpassword + "' WHERE userid = " + strconv.Itoa(userid)
+	//Hash password lama yang diinput untuk verifikasi
+	hash := sha256.Sum256([]byte(oldpassword))
+	passwordHash := hex.EncodeToString(hash[:])
+
+	if password == passwordHash {
+		//hash password baru
+		hash2 := sha256.Sum256([]byte(newpassword))
+		passwordHash2 := hex.EncodeToString(hash2[:])
+		query := "UPDATE users SET password = '" + passwordHash2 + "' WHERE userid = " + strconv.Itoa(userid)
 		_, errQuery := db.Exec(query)
 
 		if errQuery != nil {
@@ -236,7 +272,10 @@ func RegisterSeller(w http.ResponseWriter, r *http.Request) {
 	inputpassword := r.Form.Get("password")
 	password := GetUserPassword(currentID)
 
-	if inputpassword != password {
+	hash := sha256.Sum256([]byte(inputpassword))
+	passwordHash := hex.EncodeToString(hash[:])
+
+	if passwordHash != password {
 		sendErrorResponse(w, "Password does not match")
 	} else {
 		_, errQuery := db.Exec("UPDATE users SET usertype = ? WHERE userid = ?", 2, currentID)
