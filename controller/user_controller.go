@@ -2,7 +2,9 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strconv"
@@ -81,10 +83,13 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	hash := sha256.Sum256([]byte(password))
+	passwordHash := hex.EncodeToString(hash[:])
+
 	user := model.User{
 		Name:        name,
 		Email:       email,
-		Password:    password,
+		Password:    passwordHash,
 		Address:     address,
 		TelephoneNo: telephoneNo,
 	}
@@ -96,7 +101,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 			res1, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
 				name,
 				email,
-				password,
+				passwordHash,
 				address,
 				telephoneNo,
 			)
