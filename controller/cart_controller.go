@@ -19,13 +19,9 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// ambil iduser dari cookie
-	_, UserID, _, _ := validateTokenFromCookies(r)
-	//jika user belum login, maka akan direturn unauthorized response
-	if UserID == -1 {
-		sendUnauthorizedResponse(w)
-		return
-	}
-	//query ke database
+	UserID := getUserIdFromCookie(r)
+
+	//Query ke database
 	query := "SELECT a.cartId,b.quantity,c.itemId,c.shopId,c.itemName,c.itemDesc,c.itemCategory,c.itemPrice,c.itemStock FROM cart a INNER JOIN cart_detail b ON a.cartId = b.cartId INNER JOIN item c ON b.itemId = c.itemId WHERE a.userId ='" + strconv.Itoa(UserID) + "'"
 	rows, err := db.Query(query)
 
@@ -50,7 +46,7 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cart.CartDetail = cartDetails
-	sendSuccessResponse(w, "Get Item di Cart Berhasil", cart)
+	sendSuccessResponse(w, "Success", cart)
 }
 
 // insert item ke cart... asumsi insert itemnya itu item yang tidak ada di cart,
@@ -67,33 +63,53 @@ func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
 	//ambil iduser dari cookie
-	_, UserID, _, _ := validateTokenFromCookies(r)
-	//jika user belum login, maka akan direturn unauthorized response
-	if UserID == -1 {
-		sendUnauthorizedResponse(w)
-		return
-	}
-	var cart model.Cart
-	var cartDetail model.CartDetail
+	UserID := getUserIdFromCookie(r)
 	//dapatkan cartID dari database menggunakan fungsi
-	cart.ID = getCartIDFromDatabase(w, UserID)
+	cartid := getCartIDFromDatabase(w, UserID)
 	// kalau cartID nya itu -1, berarti ada yang eror sehingga langsung return saja
-	if cart.ID == -1 {
+	if cartid == -1 {
 		return
 	}
-	_, errQuery := db.Exec("INSERT INTO cart_detail(cartId,itemId,quantity)values(?,?,?)",
-		cart.ID,
-		itemId,
-		quantity,
-	)
-	cartDetail.Item.ID = itemId
-	cartDetail.Quantity = quantity
-	cart.CartDetail = append(cart.CartDetail, cartDetail)
-	if errQuery == nil {
-		sendSuccessResponse(w, "Insert Item ke Cart Berhasil", cart)
+	qtyInCart := checkItemInCart(cartid, itemId)
+	if qtyInCart == 0 {
+		_, errQuery := db.Exec("INSERT INTO cart_detail(cartId,itemId,quantity)values(?,?,?)",
+			cartid,
+			itemId,
+			quantity,
+		)
+		if errQuery == nil {
+			sendSuccessResponse(w, "Successfully inserted product to cart", nil)
+		} else {
+			log.Println(errQuery)
+			sendErrorResponse(w, "Failed to insert product to cart")
+		}
 	} else {
-		log.Println(errQuery)
-		sendErrorResponse(w, "Insert Item ke cart gagal")
+		newquantity := qtyInCart + quantity
+		query := "UPDATE cart_detail SET quantity = ? WHERE cartid = ? AND itemid= ?"
+		_, errQuery := db.Exec(query, newquantity, cartid, itemId)
+		if errQuery == nil {
+			sendSuccessResponse(w, "Successfully inserted product to cart", nil)
+		} else {
+			log.Println(errQuery)
+			sendErrorResponse(w, "Failed to insert product to cart")
+		}
+	}
+}
+
+func checkItemInCart(cartid int, itemid int) int {
+	db := connect()
+	defer db.Close()
+
+	var qty int
+	query := "SELECT quantity FROM cart_detail WHERE cartid = ? AND itemid = ?"
+	row := db.QueryRow(query, cartid, itemid)
+	switch err := row.Scan(&qty); err {
+	case sql.ErrNoRows:
+		return 0
+	case nil:
+		return qty
+	default:
+		return -1
 	}
 }
 
@@ -115,12 +131,7 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Quantity tidak boleh lebih kecil atau sama dengan nol")
 		return
 	}
-	_, UserID, _, _ := validateTokenFromCookies(r)
-	//jika user belum login, maka akan direturn unauthorized response
-	if UserID == -1 {
-		sendUnauthorizedResponse(w)
-		return
-	}
+	UserID := getUserIdFromCookie(r)
 	//cek stok terlebih dahulu dengan query stok item yang akan diedit
 	query := "SELECT itemStock FROM item WHERE itemId='" + strconv.Itoa(itemId) + "'"
 	rows, err := db.Query(query)
@@ -130,40 +141,35 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var item model.Item
+	var dbstock int
 	for rows.Next() {
-		if err := rows.Scan(&item.Stock); err != nil {
+		if err := rows.Scan(&dbstock); err != nil {
 			log.Println(err)
 			sendErrorResponse(w, "Error result scan")
 			return
 		}
 	}
 	//jika stok < quantity, maka akan direturn pesan eror
-	if item.Stock < quantity {
-		sendErrorResponse(w, "Stok kurang dari Quantity")
+	if dbstock < quantity {
+		sendErrorResponse(w, "Stock is not enough")
 		return
 	}
-	var cart model.Cart
-	var cartDetail model.CartDetail
 	//dapatkan cartID dari database menggunakan fungsi
-	cart.ID = getCartIDFromDatabase(w, UserID)
+	cartid := getCartIDFromDatabase(w, UserID)
 	// kalau cartID nya itu -1, berarti ada yang eror sehingga langsung return saja
-	if cart.ID == -1 {
+	if cartid == -1 {
 		return
 	}
 	_, errQuery := db.Exec("UPDATE cart_detail SET quantity = ? WHERE cartId=? AND itemId=?",
 		quantity,
-		cart.ID,
+		cartid,
 		itemId,
 	)
-	cartDetail.Item.ID = itemId
-	cartDetail.Quantity = quantity
-	cart.CartDetail = append(cart.CartDetail, cartDetail)
 	if errQuery == nil {
-		sendSuccessResponse(w, "Update Cart Berhasil", cart)
+		sendSuccessResponse(w, "Successfully updated cart product", nil)
 	} else {
 		log.Println(errQuery)
-		sendErrorResponse(w, "Update Cart Gagal")
+		sendErrorResponse(w, "Failed to update cart product")
 	}
 }
 
@@ -179,33 +185,24 @@ func DeleteItemFromCart(w http.ResponseWriter, r *http.Request) {
 	}
 	vars := mux.Vars(r)
 	itemId := vars["item_id"]
-	_, UserID, _, _ := validateTokenFromCookies(r)
-	//jika user belum login, maka akan direturn unauthorized response
-	if UserID == -1 {
-		sendUnauthorizedResponse(w)
-		return
-	}
+	UserID := getUserIdFromCookie(r)
 
-	var cart model.Cart
-	var cartDetail model.CartDetail
 	//dapatkan cartID dari database menggunakan fungsi
-	cart.ID = getCartIDFromDatabase(w, UserID)
+	cartid := getCartIDFromDatabase(w, UserID)
 	// kalau cartID nya itu -1, berarti ada yang eror sehingga langsung return saja
-	if cart.ID == -1 {
+	if cartid == -1 {
 		return
 	}
 	//hapus dari tabel cart_detail yang memiliki cartId ... dan itemId ...
 	_, errQuery := db.Exec("DELETE FROM cart_detail WHERE cartId=? AND itemId=?",
-		cart.ID,
+		cartid,
 		itemId,
 	)
-	cartDetail.Item.ID, _ = strconv.Atoi(itemId)
-	cart.CartDetail = append(cart.CartDetail, cartDetail)
 	if errQuery == nil {
-		sendSuccessResponse(w, "Delete Item dari Cart Berhasil", cart)
+		sendSuccessResponse(w, "Product successfully removed from cart", nil)
 	} else {
 		log.Println(errQuery)
-		sendErrorResponse(w, "Delete Item dari Cart Gagal")
+		sendErrorResponse(w, "Failed to remove product from cart")
 	}
 
 }
