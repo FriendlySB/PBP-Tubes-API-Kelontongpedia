@@ -19,14 +19,14 @@ func SetMonthlyReportScheduler() {
 }
 
 func SendReport() {
+	//Ambil list id toko dan emailnya yang tidak diban
 	listid, listemail := GetShopData()
 
 	for i := 0; i < len(listid); i++ {
-		//Dapatkan jumlah transaksi total, jumlah produk terjual, dan income dalam 1 bulan terakhir
+		//Dapatkan jumlah transaksi total, jumlah produk terjual, dan income dalam 1 bulan terakhir untuk sebuah toko
 		transactionCount, productSold, income := calculateTransaction(listid[i])
 		//Kirim data tersebut ke email toko
-		//Untuk sementara belum
-		fmt.Println(transactionCount, productSold, income, listemail[i])
+		sendMailMonthlyReport(transactionCount, productSold, income, listemail[i])
 	}
 }
 func calculateTransaction(shopid int) (int, int, int) {
