@@ -84,32 +84,41 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	user := model.User{
 		Name:        name,
 		Email:       email,
+		Password:    password,
 		Address:     address,
 		TelephoneNo: telephoneNo,
 	}
 
-	res, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
-		name,
-		email,
-		password,
-		address,
-		telephoneNo,
-	)
+	query := "SELECT userid FROM USERS WHERE Email ='" + email + "'"
+	err1 := db.QueryRow(query).Scan(&user.ID)
+	if err1 != nil {
+		if err1 == sql.ErrNoRows {
+			res1, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
+				name,
+				email,
+				password,
+				address,
+				telephoneNo,
+			)
 
-	if errQuery != nil {
-		log.Println(errQuery)
-		sendErrorResponse(w, "Register Gagal")
-	} else {
-		id, _ := res.LastInsertId()
-		_, errQuery2 := db.Exec("INSERT INTO CART (userid) VALUES (?)", id)
-		if errQuery2 != nil {
-			log.Println(errQuery)
-			sendErrorResponse(w, "Register Gagal")
-		} else {
-			sendSuccessResponse(w, "Register Berhasil", nil)
+			if errQuery != nil {
+				log.Println(errQuery)
+				sendErrorResponse(w, "Register Gagal")
+			} else {
+				id, _ := res1.LastInsertId()
+				_, errQuery2 := db.Exec("INSERT INTO CART (userid) VALUES (?)", id)
+				if errQuery2 != nil {
+					log.Println(errQuery)
+					sendErrorResponse(w, "Register Gagal")
+				} else {
+					sendSuccessResponse(w, "Register Berhasil", nil)
+					sendMailRegis(user)
+				}
+			}
 		}
+	} else {
+		sendErrorResponse(w, "Email sudah terdaftar")
 	}
-	sendMailRegis(user)
 }
 
 func ChangePassword(w http.ResponseWriter, r *http.Request) {
