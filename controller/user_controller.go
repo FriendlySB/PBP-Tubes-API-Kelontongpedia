@@ -272,7 +272,10 @@ func RegisterSeller(w http.ResponseWriter, r *http.Request) {
 	inputpassword := r.Form.Get("password")
 	password := GetUserPassword(currentID)
 
-	if inputpassword != password {
+	hash := sha256.Sum256([]byte(inputpassword))
+	passwordHash := hex.EncodeToString(hash[:])
+
+	if passwordHash != password {
 		sendErrorResponse(w, "Password does not match")
 	} else {
 		_, errQuery := db.Exec("UPDATE users SET usertype = ? WHERE userid = ?", 2, currentID)
