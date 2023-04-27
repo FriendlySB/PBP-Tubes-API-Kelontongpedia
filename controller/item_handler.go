@@ -2,7 +2,6 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
-	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -58,7 +57,6 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 		}
 		query += " shopid = '" + shopid + "'"
 	}
-	fmt.Println(query)
 	rows, err := db.Query(query)
 
 	if err != nil {
