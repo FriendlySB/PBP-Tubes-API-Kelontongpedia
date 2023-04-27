@@ -99,11 +99,11 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	if err1 != nil {
 		if err1 == sql.ErrNoRows {
 			res1, errQuery := db.Exec("INSERT INTO users(name, email, password, address, telpNo)values(?,?,?,?,?)",
-				name,
-				email,
-				passwordHash,
-				address,
-				telephoneNo,
+				user.Name,
+				user.Email,
+				user.Password,
+				user.Address,
+				user.TelephoneNo,
 			)
 
 			if errQuery != nil {
