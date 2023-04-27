@@ -19,11 +19,13 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Failed")
 		return
 	}
+
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
 
-	if email == "" || password == "!!" {
+	if email == "" || password == "" {
 		sendErrorResponse(w, "Masih terdapat input kosong")
+		return
 	}
 
 	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + password + "'"
@@ -73,6 +75,11 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	password := r.Form.Get("password")
 	address := r.Form.Get("address")
 	telephoneNo := r.Form.Get("telephone")
+
+	if name == "" || email == "" || password == "" || address == "" || telephoneNo == "" {
+		sendErrorResponse(w, "Masih terdapat input kosong")
+		return
+	}
 
 	user := model.User{
 		Name:        name,
