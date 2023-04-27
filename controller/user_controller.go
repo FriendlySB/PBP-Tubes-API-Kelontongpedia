@@ -30,30 +30,27 @@ func Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + password + "'"
+	hash := sha256.Sum256([]byte(password))
+	passwordHash := hex.EncodeToString(hash[:])
+
+	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + passwordHash + "'"
 	var user model.User
 	err1 := db.QueryRow(query).Scan(&user.ID, &user.Name, &user.UserType)
 
 	if err1 != nil {
 		if err1 == sql.ErrNoRows {
-			sendErrorResponse(w, "Invalid email or password")
+			sendErrorResponse(w, "Email atau Password salah")
 			return
 		}
 		log.Println(err1)
-		sendErrorResponse(w, "Something went wrong, please try again")
+		sendErrorResponse(w, "Terjadi Error")
 		return
+	} else {
+		generateToken(w, user.ID, user.Name, user.UserType)
+		sendSuccessResponse(w, "Login Success", nil)
+		//sendMailLogin(user2)
 	}
-	query2 := "SELECT userid, name, email FROM users WHERE Email ='" + email + "' && Password='" + password + "'"
-	var user2 model.User
-	err2 := db.QueryRow(query2).Scan(&user2.ID, &user2.Name, &user2.Email)
-	if err2 != nil {
-		log.Println(err2)
-		sendErrorResponse(w, "Something went wrong, please try again")
-		return
-	}
-	generateToken(w, user.ID, user.Name, user.UserType)
-	sendSuccessResponse(w, "Login Success", nil)
-	//sendMailLogin(user2)
+
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
