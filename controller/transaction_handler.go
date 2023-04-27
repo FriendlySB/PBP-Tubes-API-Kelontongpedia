@@ -41,7 +41,7 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 		err2 := row2.Scan(&check)
 		//jika terjadi eror saat mengecek
 		if err2 != nil {
-			sendErrorResponse(w, "Error ketika mengecek apakah user admin toko")
+			sendErrorResponse(w, "Error checking shop admin")
 			return
 		}
 		//jika user bukan admin toko, maka akan direturn unauthorized response
@@ -108,7 +108,7 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 	// 		filteredTransactions = append(filteredTransactions, v)
 	// 	}
 	// }
-	sendSuccessResponse(w, "Get Transaction Berhasil", transactions)
+	sendSuccessResponse(w, "Success", transactions)
 }
 
 // insert item ke transaction... asumsi insert itemnya itu item yang tidak ada di transaction, kalau itemnya ada, berarti pakai update
@@ -116,58 +116,51 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 	//baca userID dari cookie
-	_, UserID, _, _ := validateTokenFromCookies(r)
-	//jika user belum login, maka akan direturn unauthorized response
-	if UserID == -1 {
-		sendUnauthorizedResponse(w)
-		return
-	}
+	UserID := getUserIdFromCookie(r)
 	//baca dari request body
 	err := r.ParseForm()
 	if err != nil {
 		sendErrorResponse(w, "Failed")
 		return
 	}
-	itemIds := r.Form["itemId"]
+	address := r.Form.Get("address")
+	delivery := r.Form.Get("delivery")
+	paymentType := r.Form.Get("payment_type")
+	itemIds := r.Form["itemid"]
 	quantities := r.Form["quantity"]
 	if len(itemIds) != len(quantities) {
-		sendErrorResponse(w, "Jumlah ItemId tidak sama dengan Quantity")
+		sendErrorResponse(w, "Number of itemId does not match quantity")
 		return
 	}
-
-	var transaction model.Transaction
 	//Insert transaksi baru
-	_, errQuery := db.Exec("INSERT INTO transaction(transactionId,userId)values(?,?)",
-		transaction.ID,
-		UserID,
+	res, errQuery := db.Exec("INSERT INTO transaction(userId,address,delivery,paymentType)values(?,?,?,?)",
+		UserID, address, delivery, paymentType,
 	)
 	if errQuery != nil {
-		sendErrorResponse(w, "gagal insert transaksi")
+		sendErrorResponse(w, "Failed while inserting transaction")
 		return
-		for i, itemId := range itemIds {
-			quantity, err := strconv.Atoi(quantities[i])
-			if err != nil {
-				sendErrorResponse(w, "Invalid quantity")
-				return
-			}
-			//insert ke detail transaksi
-			_, errQuery := db.Exec("INSERT INTO transaction_detail(transactionId,itemId,quantity)values(?,?,?)",
-				transaction.ID,
-				itemId,
-				quantity,
-			)
-			var transactionDetail model.TransactionDetail
-			//broken disini
-			transactionDetail.Item.ID = itemId
-			transactionDetail.Quantity = quantity
-			transaction.TransactionDetail = append(transaction.TransactionDetail, transactionDetail)
-			if errQuery != nil {
-				fmt.Println(errQuery)
-				sendErrorResponse(w, "gagal insert item ke transaksi")
-			} else {
-				sendSuccessResponse(w, "Insert item ke transaksi berhasil", transaction)
-			}
+	}
+	//ID transaction yang baru diinsert
+	insertedTransId, _ := res.LastInsertId()
+	for i := 0; i < len(itemIds); i++ {
+		quantity, err := strconv.Atoi(quantities[i])
+		if err != nil {
+			sendErrorResponse(w, "Invalid quantity")
+			return
 		}
+		//insert ke detail transaksi
+		_, errQuery := db.Exec("INSERT INTO transaction_detail(transactionId,itemId,quantity)values(?,?,?)",
+			insertedTransId,
+			itemIds[i],
+			quantity,
+		)
+		if errQuery != nil {
+			fmt.Println(errQuery)
+			sendErrorResponse(w, "Failed to record transaction")
+		} else {
+			sendSuccessResponse(w, "Transaction recorded", nil)
+		}
+
 	}
 }
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
@@ -194,4 +187,7 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	} else {
 		sendSuccessResponse(w, "Progress updated", nil)
 	}
+}
+func ReduceStock() {
+	//Reduce stock produk setelah transaksi sukses
 }
