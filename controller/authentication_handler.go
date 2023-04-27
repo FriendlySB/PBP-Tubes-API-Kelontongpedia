@@ -4,16 +4,19 @@ import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/joho/godotenv"
 )
 
-var jwtKey = []byte("joensuu")
-var tokenName = "token"
+var _ = godotenv.Load()
+var jwtKey = []byte(os.Getenv("JWT_TOKEN"))
+var tokenName = os.Getenv("TOKEN_NAME")
 
 func generateToken(w http.ResponseWriter, id int, name string, usertype int) {
-	tokenExpiryTime := time.Now().Add(5 * time.Minute)
+	tokenExpiryTime := time.Now().Add(30 * time.Minute)
 
 	claims := &model.Claim{
 		ID:       id,
