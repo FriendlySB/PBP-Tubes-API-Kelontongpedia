@@ -16,12 +16,12 @@ func sendMailRegis(user model.User) {
 
 	result, _ := parseTemplate(template, user)
 
-	mail.SetHeader("From", "lamabunta@gmail.com")
+	mail.SetHeader("From", "kelontongpedia23@gmail.com")
 	mail.SetHeader("To", user.Email)
 	mail.SetHeader("Subject", "Notifications")
 	mail.SetBody("text/html", result)
 
-	sender := gm.NewDialer("smtp.gmail.com", 25, "lamabunta@gmail.com", "gnkglansnfmbshty")
+	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia23@gmail.com", "vdfsiejrvbjrpnyg")
 
 	if err := sender.DialAndSend(mail); err != nil {
 		fmt.Println(err)
@@ -37,12 +37,12 @@ func sendMailLogin(user model.User) {
 
 	result, _ := parseTemplate(template, user)
 
-	mail.SetHeader("From", "lamabunta@gmail.com")
+	mail.SetHeader("From", "kelontongpedia23@gmail.com")
 	mail.SetHeader("To", user.Email)
 	mail.SetHeader("Subject", "Notifications")
 	mail.SetBody("text/html", result)
 
-	sender := gm.NewDialer("smtp.gmail.com", 25, "lamabunta@gmail.com", "gnkglansnfmbshty")
+	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia23@gmail.com", "vdfsiejrvbjrpnyg")
 
 	if err := sender.DialAndSend(mail); err != nil {
 		fmt.Println(err)
@@ -58,12 +58,12 @@ func sendMailBanUser(user model.User) {
 
 	result, _ := parseTemplate(template, user)
 
-	mail.SetHeader("From", "lamabunta@gmail.com")
+	mail.SetHeader("From", "kelontongpedia23@gmail.com")
 	mail.SetHeader("To", user.Email)
 	mail.SetHeader("Subject", "Notifications")
 	mail.SetBody("text/html", result)
 
-	sender := gm.NewDialer("smtp.gmail.com", 25, "lamabunta@gmail.com", "gnkglansnfmbshty")
+	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia23@gmail.com", "vdfsiejrvbjrpnyg")
 
 	if err := sender.DialAndSend(mail); err != nil {
 		fmt.Println(err)
@@ -77,11 +77,11 @@ func sendMailRegisShop(user model.User, shop string) {
 	sendEmail := func(to, template string) {
 		mail := gm.NewMessage()
 		result, _ := parseTemplate(template, user)
-		mail.SetHeader("From", "lamabunta@gmail.com")
+		mail.SetHeader("From", "kelontongpedia23@gmail.com")
 		mail.SetHeader("To", to)
 		mail.SetHeader("Subject", "Notifications")
 		mail.SetBody("text/html", result)
-		sender := gm.NewDialer("smtp.gmail.com", 25, "lamabunta@gmail.com", "gnkglansnfmbshty")
+		sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia23@gmail.com", "vdfsiejrvbjrpnyg")
 		if err := sender.DialAndSend(mail); err != nil {
 			fmt.Println(err)
 		} else {
@@ -104,12 +104,12 @@ func sendMailInsertAdmin(user model.User) {
 
 	result, _ := parseTemplate(template, user)
 
-	mail.SetHeader("From", "lamabunta@gmail.com")
+	mail.SetHeader("From", "kelontongpedia23@gmail.com")
 	mail.SetHeader("To", user.Email)
 	mail.SetHeader("Subject", "Notifications")
 	mail.SetBody("text/html", result)
 
-	sender := gm.NewDialer("smtp.gmail.com", 25, "lamabunta@gmail.com", "gnkglansnfmbshty")
+	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia23@gmail.com", "vdfsiejrvbjrpnyg")
 
 	if err := sender.DialAndSend(mail); err != nil {
 		fmt.Println(err)
@@ -125,12 +125,12 @@ func sendMailBanShop(shop model.Shop) {
 
 	result, _ := parseTemplate(template, shop)
 
-	mail.SetHeader("From", "lamabunta@gmail.com")
+	mail.SetHeader("From", "kelontongpedia23@gmail.com")
 	mail.SetHeader("To", shop.Email)
 	mail.SetHeader("Subject", "Notifications")
 	mail.SetBody("text/html", result)
 
-	sender := gm.NewDialer("smtp.gmail.com", 25, "lamabunta@gmail.com", "gnkglansnfmbshty")
+	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia23@gmail.com", "vdfsiejrvbjrpnyg")
 
 	if err := sender.DialAndSend(mail); err != nil {
 		fmt.Println(err)

@@ -45,7 +45,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	}
 	generateToken(w, user.ID, user.Name, user.UserType)
 	sendSuccessResponse(w, "Login Success", nil)
-	sendMailLogin(user2)
+	//sendMailLogin(user2)
 }
 
 func Logout(w http.ResponseWriter, r *http.Request) {
@@ -140,13 +140,17 @@ func GetUserProfile(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	query := "SELECT userid, name, email, address, telpNo FROM users"
-	name := r.URL.Query()["name"]
-	userid := r.URL.Query()["userid"]
-	if name != nil {
-		query += " WHERE name='" + name[0] + "'"
+	name := r.URL.Query().Get("name")
+	userid := r.URL.Query().Get("userid")
+
+	if userid == "" {
+		userid = strconv.Itoa(getUserIdFromCookie(r))
 	}
-	if userid != nil {
-		query += " WHERE userid=" + userid[0]
+	if name != "" {
+		query += " WHERE name='" + name + "'"
+	}
+	if userid != "" {
+		query += " WHERE userid=" + userid
 	}
 
 	rows, err := db.Query(query)
