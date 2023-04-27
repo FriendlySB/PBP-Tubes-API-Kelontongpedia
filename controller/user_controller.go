@@ -22,6 +22,10 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	email := r.Form.Get("email")
 	password := r.Form.Get("password")
 
+	if email == "" || password == "!!" {
+		sendErrorResponse(w, "Masih terdapat input kosong")
+	}
+
 	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + password + "'"
 	var user model.User
 	err1 := db.QueryRow(query).Scan(&user.ID, &user.Name, &user.UserType)
