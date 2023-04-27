@@ -150,8 +150,15 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	//Password lama user dari database untuk dibandingkan
 	var password = GetUserPassword(userid)
 
-	if password == oldpassword {
-		query := "UPDATE users SET password = '" + newpassword + "' WHERE userid = " + strconv.Itoa(userid)
+	//Hash password lama yang diinput untuk verifikasi
+	hash := sha256.Sum256([]byte(oldpassword))
+	passwordHash := hex.EncodeToString(hash[:])
+
+	if password == passwordHash {
+		//hash password baru
+		hash2 := sha256.Sum256([]byte(newpassword))
+		passwordHash2 := hex.EncodeToString(hash2[:])
+		query := "UPDATE users SET password = '" + passwordHash2 + "' WHERE userid = " + strconv.Itoa(userid)
 		_, errQuery := db.Exec(query)
 
 		if errQuery != nil {
