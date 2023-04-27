@@ -4,6 +4,7 @@ import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"crypto/sha256"
 	"encoding/hex"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,6 +23,7 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
+	CurUserID := getUserIdFromCookie(r)
 	vars := mux.Vars(r)
 	shopid := vars["shop_id"]
 	shopname := r.Form.Get("shop_name")
@@ -31,6 +33,13 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 	shoptelephone := r.Form.Get("shop_telephone")
 	shopemail := r.Form.Get("shop_email")
 	shopstatus := r.Form.Get("shop_status")
+
+	//Cek apakah penjual admin toko ini. Kalau bukan, unauthorized access
+	if !CheckShopAdmin(CurUserID, shopid) {
+		sendUnauthorizedResponse(w)
+		return
+	}
+
 	query := "UPDATE shop SET "
 	if shopname != "" {
 		query += "shopname = '" + shopname + "'"
@@ -180,16 +189,14 @@ func RegisterShop(w http.ResponseWriter, r *http.Request) {
 		} else {
 			id, _ := res.LastInsertId()
 			shopid := int(id)
-			//Ambil dari cookie
-			userid := 5
 			query = "INSERT INTO shop_admin VALUES(?,?)"
-			_, errQuery2 := db.Exec(query, shopid, userid)
+			_, errQuery2 := db.Exec(query, shopid, currentID)
 			if errQuery2 != nil {
 				log.Println(errQuery2)
 				sendErrorResponse(w, "Failed to register shop")
 			} else {
 				var user model.User
-				errQuery3 := db.QueryRow("SELECT u.userid, u.name, u.email FROM users u INNER JOIN shop_admin sa ON sa.userId = u.userid INNER JOIN shop s ON s.shopId=sa.shopId WHERE u.userid = ?", userid).Scan(&user.ID, &user.Name, &user.Email)
+				errQuery3 := db.QueryRow("SELECT u.userid, u.name, u.email FROM users u INNER JOIN shop_admin sa ON sa.userId = u.userid INNER JOIN shop s ON s.shopId=sa.shopId WHERE u.userid = ?", currentID).Scan(&user.ID, &user.Name, &user.Email)
 				if errQuery3 != nil {
 					log.Println(errQuery3)
 					sendErrorResponse(w, "Failed to register shop")
@@ -210,14 +217,19 @@ func InsertShopAdmin(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Something went wrong, please try again")
 		return
 	}
+	CurUserID := getUserIdFromCookie(r)
 	shopid := r.Form.Get("shop_id")
 	email := r.Form.Get("email")
 
+	//Cek apakah penjual admin toko ini. Kalau bukan, unauthorized access
+	if !CheckShopAdmin(CurUserID, shopid) {
+		sendUnauthorizedResponse(w)
+		return
+	}
 	userid := 0
 	emailresult := ""
 	usertype := 0
 	query := "SELECT userid,email,usertype FROM users WHERE email = '" + email + "'"
-	fmt.Println(query)
 	rows, err := db.Query(query)
 	if err != nil {
 		sendErrorResponse(w, "User with this email doesn't exists!")
@@ -284,4 +296,20 @@ func GetUserShop(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sendSuccessResponse(w, "Success", shopList)
+}
+func CheckShopAdmin(userid int, shopid string) bool {
+	db := connect()
+	defer db.Close()
+
+	query := "SELECT shopid FROM shop_admin WHERE userid=? AND shopid = ?"
+	row := db.QueryRow(query, userid, shopid)
+	var temp int
+	switch err := row.Scan(&temp); err {
+	case sql.ErrNoRows:
+		return false
+	case nil:
+		return true
+	default:
+		return false
+	}
 }

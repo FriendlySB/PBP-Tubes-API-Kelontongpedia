@@ -79,7 +79,7 @@ func main() {
 	//Produk bisa bisa dilihat siapapunn
 	router.HandleFunc("/item", controller.GetItem).Methods("GET")
 	router.HandleFunc("/item", controller.Authenticate(controller.InsertItem, 2)).Methods("POST")
-	router.HandleFunc("/item", controller.Authenticate(controller.UpdateItem, 2)).Methods("PUT")
+	router.HandleFunc("/item/{item_id}", controller.Authenticate(controller.UpdateItem, 2)).Methods("PUT")
 	router.HandleFunc("/item/{item_id}", controller.Authenticate(controller.DeleteItem, 2)).Methods("DELETE")
 
 	//Shop
@@ -94,7 +94,7 @@ func main() {
 	router.HandleFunc("/transaction", controller.Authenticate(controller.GetAllTransaction, 1)).Methods("GET")
 	router.HandleFunc("/transaction", controller.Authenticate(controller.InsertItemToTransaction, 1)).Methods("POST")
 	//Update transaksi hanya bisa dilakukan penjual saja
-	router.HandleFunc("/updateTransaction/{transaction_id}", controller.Authenticate(controller.UpdateTransaction, 2)).Methods("PUT")
+	router.HandleFunc("/transaction/{transaction_id}", controller.Authenticate(controller.UpdateTransaction, 2)).Methods("PUT")
 
 	//Profile
 	router.HandleFunc("/profile", controller.Authenticate(controller.GetUserProfile, 1)).Methods("GET")
