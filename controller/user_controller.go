@@ -31,7 +31,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	password := r.Form.Get("password")
 
 	if email == "" || password == "" {
-		sendErrorResponse(w, "Masih terdapat input kosong")
+		sendErrorResponse(w, "There are some empty input")
 		return
 	}
 
@@ -139,7 +139,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		sendErrorResponse(w, "Email sudah terdaftar")
+		sendErrorResponse(w, "The email is already registered")
 	}
 }
 
@@ -342,7 +342,7 @@ func setCurUserToRedis(user model.User) {
 		DB:       0,  // use default DB
 	})
 	marshal, _ := json.Marshal(user)
-	if err := rdb.Set(ctx, "curUser", marshal, 30*time.Minute).Err(); err != nil {
+	if err := rdb.Set(ctx, "curUser", marshal, 0).Err(); err != nil {
 		panic(err)
 	}
 	rdb.Expire(ctx, "curUser", 30*time.Minute)
