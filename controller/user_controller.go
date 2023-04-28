@@ -342,7 +342,7 @@ func setCurUserToRedis(user model.User) {
 		DB:       0,  // use default DB
 	})
 	marshal, _ := json.Marshal(user)
-	if err := rdb.Set(ctx, "curUser", marshal, 30*time.Minute).Err(); err != nil {
+	if err := rdb.Set(ctx, "curUser", marshal, 0).Err(); err != nil {
 		panic(err)
 	}
 	rdb.Expire(ctx, "curUser", 30*time.Minute)
