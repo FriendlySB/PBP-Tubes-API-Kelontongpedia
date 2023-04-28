@@ -92,7 +92,7 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err.Error())
 		}
-		sendSuccessResponse(w, "Shop banned", nil)
+		sendSuccessResponse(w, "The shop has been banned", nil)
 		sendMailBanShop(shop)
 	}
 }
