@@ -98,7 +98,7 @@ func main() {
 
 	//Profile
 	router.HandleFunc("/profile", controller.Authenticate(controller.GetUserProfile, 1)).Methods("GET")
-	router.HandleFunc("/updateprofile", controller.Authenticate(controller.UpdateUserProfile, 1)).Methods("PUT")
+	router.HandleFunc("/profile", controller.Authenticate(controller.UpdateUserProfile, 1)).Methods("PUT")
 
 	//Review
 	router.HandleFunc("/review", controller.Authenticate(controller.ReviewItem, 1)).Methods("POST")
@@ -108,6 +108,7 @@ func main() {
 	//Admin
 	router.HandleFunc("/banshop/{shop_id}", controller.Authenticate(controller.BanShop, 0)).Methods("PUT")
 	router.HandleFunc("/banuser/{user_id}", controller.Authenticate(controller.BanUser, 0)).Methods("PUT")
+	router.HandleFunc("/useradmin", controller.Authenticate(controller.GetUser, 0)).Methods("PUT")
 
 	corsHandler := cors.New(cors.Options{
 		AllowedOrigins:   []string{"localhost:8181"},

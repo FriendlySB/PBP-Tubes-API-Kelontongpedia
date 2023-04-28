@@ -186,14 +186,14 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 			sendErrorResponse(w, "Failed to record transaction")
 		} else {
 			boolStock := reduceStock(itemIds[i], quantity)
-			if boolStock {
-				sendSuccessResponse(w, "Transaction recorded", nil)
-			} else {
+			if !boolStock {
 				sendErrorResponse(w, "Failed to Update Stock")
 			}
 		}
-
 	}
+	//Update reputasi toko
+	UpdateReputation(CheckItemShop(itemIds[0]))
+	sendSuccessResponse(w, "Transaction recorded", nil)
 }
 
 func UpdateTransaction(w http.ResponseWriter, r *http.Request) {

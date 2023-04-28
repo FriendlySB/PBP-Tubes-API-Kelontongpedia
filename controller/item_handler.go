@@ -247,8 +247,7 @@ func DeleteItem(w http.ResponseWriter, r *http.Request) {
 func CheckItemShop(itemid string) int {
 	db := connect()
 	defer db.Close()
-
-	query := "SELECT shopid FROM shop WHERE itemid =?"
+	query := "SELECT shopid FROM item WHERE itemid =?"
 	row := db.QueryRow(query, itemid)
 	var shopid int
 	switch err := row.Scan(&shopid); err {
