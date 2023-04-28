@@ -128,7 +128,7 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
 	//cek quantity produk, jika lebih kecil atau sama dengan nol, maka akan direturn response error
 	if quantity <= 0 {
-		sendErrorResponse(w, "Quantity tidak boleh lebih kecil atau sama dengan nol")
+		sendErrorResponse(w, "Quantity cannot be less than or equal to zero")
 		return
 	}
 	UserID := getUserIdFromCookie(r)
