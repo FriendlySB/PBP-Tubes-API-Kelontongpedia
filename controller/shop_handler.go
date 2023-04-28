@@ -3,9 +3,8 @@ package controller
 import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"crypto/sha256"
-	"encoding/hex"
 	"database/sql"
-	"fmt"
+	"encoding/hex"
 	"log"
 	"net/http"
 	"strconv"
@@ -82,7 +81,6 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	query += " WHERE shopid = " + shopid
 	_, errQuery := db.Exec(query)
-	fmt.Println(query)
 	if errQuery != nil {
 		log.Println(errQuery)
 		sendErrorResponse(w, "Failed to update shop profile")
@@ -100,8 +98,6 @@ func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 	shopname := r.URL.Query().Get("shop_name")
 	shopcategory := r.URL.Query().Get("shop_category")
 	shopreputation := r.URL.Query().Get("shop_reputation")
-
-	fmt.Println(shopid, shopname, shopcategory, shopreputation)
 
 	query := "SELECT * FROM shop "
 
@@ -132,7 +128,6 @@ func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		query += " shopReputation >= '" + shopreputation + "'"
 	}
-	fmt.Println(query)
 	rows, err := db.Query(query)
 
 	if err != nil {
@@ -312,4 +307,17 @@ func CheckShopAdmin(userid int, shopid string) bool {
 	default:
 		return false
 	}
+}
+func UpdateReputation(shopid int) {
+	db := connect()
+	defer db.Close()
+	//Update reputasi toko. Setiap transaksi sukses akan menambah 5 poin reputasi
+	query := "SELECT shopreputation FROM shop WHERE shopid = ?"
+	row := db.QueryRow(query, shopid)
+	var reputation int
+	if err := row.Scan(&reputation); err != nil {
+		return
+	}
+	reputation = reputation + 5
+	db.Exec("UPDATE shop SET shopreputation = ? WHERE shopid=?", reputation, shopid)
 }

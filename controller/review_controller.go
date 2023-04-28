@@ -2,7 +2,6 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -52,7 +51,7 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Error while parsing form")
 		return
 	}
-	itemId := r.Form.Get("itemId")
+	itemId := r.Form.Get("itemid")
 	rating := r.Form.Get("rating")
 	review := r.Form.Get("review")
 
@@ -63,7 +62,7 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 	query += "INNER JOIN transaction_detail td ON td.transactionId=t.transactionId "
 	query += "INNER JOIN item i ON i.itemId=td.itemId "
 	query += "WHERE u.userid=? AND i.itemId=? AND t.progress='Selesai'"
-	fmt.Println(query)
+
 	row := db.QueryRow(query, currentID, itemId)
 	err = row.Scan(&check)
 	if err != nil {
@@ -79,23 +78,9 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 	_, errQuery := db.Exec("INSERT INTO review(itemID, userID, rating, review) VALUES(?,?,?,?)", itemId, currentID, rating, review)
 
 	if errQuery == nil {
-		rows, err := db.Query("SELECT reviewId, userId, review_date, rating, review FROM review WHERE reviewId = LAST_INSERT_ID()")
-		if err != nil {
-			sendErrorResponse(w, "Error while fetching updated data")
-			return
-		}
-		defer rows.Close()
-
-		var review model.Review
-		for rows.Next() {
-			if err := rows.Scan(&review.ID, &review.UserId, &review.ReviewDate, &review.Rating, &review.Review); err != nil {
-				sendErrorResponse(w, "Error while scanning rows")
-				return
-			}
-		}
-		sendSuccessResponse(w, "Success", review)
+		sendSuccessResponse(w, "Success", nil)
 	} else {
-		sendErrorResponse(w, "Error while scanning rows")
+		sendErrorResponse(w, "Insert failed")
 	}
 
 }

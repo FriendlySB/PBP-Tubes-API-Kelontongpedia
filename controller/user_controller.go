@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -37,20 +38,27 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	hash := sha256.Sum256([]byte(password))
 	passwordHash := hex.EncodeToString(hash[:])
 
-	query := "SELECT userid, Name, UserType FROM USERS WHERE Email ='" + email + "' && Password='" + passwordHash + "'"
-	var user model.User
-	err1 := db.QueryRow(query).Scan(&user.ID, &user.Name, &user.UserType)
+	var isbanned bool
 
+	query := "SELECT userid, Name,email,address,telpno, UserType,banstatus FROM USERS WHERE Email ='" + email + "' && Password='" + passwordHash + "'"
+	var user model.User
+	err1 := db.QueryRow(query).Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo, &user.UserType, &isbanned)
 	if err1 != nil {
 		if err1 == sql.ErrNoRows {
-			sendErrorResponse(w, "Email atau Password salah")
+			sendErrorResponse(w, "Wrong login credentials")
 			return
 		}
 		log.Println(err1)
-		sendErrorResponse(w, "Terjadi Error")
+		sendErrorResponse(w, "Error")
 		return
 	} else {
+		if isbanned {
+			sendErrorResponse(w, "User is banned")
+			return
+		}
 		generateToken(w, user.ID, user.Name, user.UserType)
+		//Kirim profil ke redis
+		setCurUserToRedis(user)
 		sendSuccessResponse(w, "Login Success", nil)
 		//sendMailLogin(user2)
 	}
@@ -61,8 +69,9 @@ func Logout(w http.ResponseWriter, r *http.Request) {
 	//User id ambil pakai cookie
 	userid := getUserIdFromCookie(r)
 	if userid == -1 {
-		sendErrorResponse(w, "Tidak ada aktivitas login sebelumnya")
+		sendErrorResponse(w, "No login activity before")
 	} else {
+		clearRedis()
 		resetUserToken(w)
 		sendSuccessResponse(w, "Logout Success", nil)
 	}
@@ -87,7 +96,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 	telephoneNo := r.Form.Get("telephone")
 
 	if name == "" || email == "" || password == "" || address == "" || telephoneNo == "" {
-		sendErrorResponse(w, "Masih terdapat input kosong")
+		sendErrorResponse(w, "There are some empty input")
 		return
 	}
 
@@ -116,15 +125,15 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 
 			if errQuery != nil {
 				log.Println(errQuery)
-				sendErrorResponse(w, "Register Gagal")
+				sendErrorResponse(w, "Register failed")
 			} else {
 				id, _ := res1.LastInsertId()
 				_, errQuery2 := db.Exec("INSERT INTO CART (userid) VALUES (?)", id)
 				if errQuery2 != nil {
 					log.Println(errQuery)
-					sendErrorResponse(w, "Register Gagal")
+					sendErrorResponse(w, "Register failed")
 				} else {
-					sendSuccessResponse(w, "Register Berhasil", nil)
+					sendSuccessResponse(w, "Register success", nil)
 					sendMailRegis(user)
 				}
 			}
@@ -175,46 +184,53 @@ func ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func GetUserProfile(w http.ResponseWriter, r *http.Request) {
+func GetUser(w http.ResponseWriter, r *http.Request) {
 	db := connect()
 	defer db.Close()
 
-	query := "SELECT userid, name, email, address, telpNo FROM users"
 	name := r.URL.Query().Get("name")
 	userid := r.URL.Query().Get("userid")
 
-	if userid == "" {
-		userid = strconv.Itoa(getUserIdFromCookie(r))
-	}
-	if name != "" {
-		query += " WHERE name='" + name + "'"
-	}
 	if userid != "" {
-		query += " WHERE userid=" + userid
-	}
+		query := "SELECT userid, name, email, address, telpNo,usertype FROM users"
+		if name != "" {
+			query += " WHERE name='" + name + "'"
+		}
+		if userid != "" {
+			query += " WHERE userid=" + userid
+		}
 
-	rows, err := db.Query(query)
-	if err != nil {
-		log.Fatal(err)
-		sendErrorResponse(w, "Error")
-	} else {
-		var user model.User
-		var users []model.User
-		for rows.Next() {
-			if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
-				sendErrorResponse(w, "Error while scanning rows")
-				return
+		rows, err := db.Query(query)
+		if err != nil {
+			log.Fatal(err)
+			sendErrorResponse(w, "Error")
+		} else {
+			var user model.User
+			var users []model.User
+			for rows.Next() {
+				if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo, &user.UserType); err != nil {
+					sendErrorResponse(w, "Error while scanning rows")
+					return
+				} else {
+					users = append(users, user)
+				}
+			}
+			if err == nil {
+				sendSuccessResponse(w, "Success", users)
 			} else {
-				users = append(users, user)
+				sendErrorResponse(w, "Error")
 			}
 		}
-		if err == nil {
-			sendSuccessResponse(w, "Success", users)
-		} else {
-			sendErrorResponse(w, "Error")
-		}
 	}
+}
 
+func GetUserProfile(w http.ResponseWriter, r *http.Request) {
+	user := getCurUserFromRedis()
+	if user.Name != "" {
+		sendSuccessResponse(w, "Success", user)
+	} else {
+		sendErrorResponse(w, "Error")
+	}
 }
 
 func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +252,7 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	_, errQuery := db.Exec("UPDATE users SET name=?, email=?, address=?, telpNo=? WHERE userid=?", name, email, address, telpNo, currentID)
 
 	if errQuery == nil {
-		rows, err := db.Query("SELECT userid, name, email, address, telpNo FROM users WHERE userid = ?", currentID)
+		rows, err := db.Query("SELECT userid, name, email, address, telpNo,usertype FROM users WHERE userid = ?", currentID)
 		if err != nil {
 			sendErrorResponse(w, "Error while fetching updated data")
 			return
@@ -245,11 +261,14 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 
 		var user model.User
 		for rows.Next() {
-			if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo); err != nil {
+			if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo, &user.UserType); err != nil {
 				sendErrorResponse(w, "Error while scanning rows")
 				return
 			}
 		}
+		//Update redis
+		clearRedis()
+		setCurUserToRedis(user)
 		sendSuccessResponse(w, "Profile updated", user)
 	} else {
 		sendErrorResponse(w, "Failed to update profile")
@@ -322,21 +341,33 @@ func setCurUserToRedis(user model.User) {
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	if err := rdb.HSet(ctx, "curUser", user).Err(); err != nil {
+	marshal, _ := json.Marshal(user)
+	if err := rdb.Set(ctx, "curUser", marshal, 30*time.Minute).Err(); err != nil {
 		panic(err)
 	}
 	rdb.Expire(ctx, "curUser", 30*time.Minute)
 }
-func getCurUserToRedis() model.User {
+func getCurUserFromRedis() model.User {
 	var user model.User
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "localhost:6379",
 		Password: "", // no password set
 		DB:       0,  // use default DB
 	})
-	err := rdb.HMGet(ctx, "curUser", "email", "type").Scan(&user)
+	value, err := rdb.Get(ctx, "curUser").Result()
 	if err != nil {
 		panic(err)
 	}
+
+	_ = json.Unmarshal([]byte(value), &user)
+
 	return user
+}
+func clearRedis() {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	rdb.Del(ctx, "curUser")
 }
