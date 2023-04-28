@@ -2,12 +2,16 @@ package controller
 
 import (
 	"PBP-Tubes-API-Tokopedia/model"
+	"context"
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"log"
 	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // Login
@@ -307,4 +311,32 @@ func GetUserPassword(id int) string {
 		}
 	}
 	return password
+}
+
+// context untuk redis
+var ctx = context.Background()
+
+func setCurUserToRedis(user model.User) {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	if err := rdb.HSet(ctx, "curUser", user).Err(); err != nil {
+		panic(err)
+	}
+	rdb.Expire(ctx, "curUser", 30*time.Minute)
+}
+func getCurUserToRedis() model.User {
+	var user model.User
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+	err := rdb.HMGet(ctx, "curUser", "email", "type").Scan(&user)
+	if err != nil {
+		panic(err)
+	}
+	return user
 }
