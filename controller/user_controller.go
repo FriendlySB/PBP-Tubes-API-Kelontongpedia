@@ -31,7 +31,7 @@ func Login(w http.ResponseWriter, r *http.Request) {
 	password := r.Form.Get("password")
 
 	if email == "" || password == "" {
-		sendErrorResponse(w, "Masih terdapat input kosong")
+		sendErrorResponse(w, "There are some empty input")
 		return
 	}
 
@@ -139,7 +139,7 @@ func RegisterUser(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else {
-		sendErrorResponse(w, "Email sudah terdaftar")
+		sendErrorResponse(w, "The email is already registered")
 	}
 }
 
