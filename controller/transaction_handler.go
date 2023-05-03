@@ -54,7 +54,6 @@ func GetAllTransaction(w http.ResponseWriter, r *http.Request) {
 		}
 		query += " GROUP BY t.`transactionId`;"
 	}
-	fmt.Println(query)
 	//eksekusi query mencari transaksi apa saja yang ada
 	rows, err := db.Query(query)
 	if err != nil {
@@ -118,6 +117,11 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	//baca userID dari cookie
 	UserID := getUserIdFromCookie(r)
+	cartid := getCartIDFromDatabase(UserID)
+	if cartid == -1 {
+		sendErrorResponse(w, "Error fetching user cart id")
+		return
+	}
 	//baca dari request body
 	err := r.ParseForm()
 	if err != nil {
@@ -133,6 +137,7 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Number of itemId does not match quantity")
 		return
 	}
+
 	for i := 0; i < len(itemIds); i++ {
 		//cek stok terlebih dahulu dengan query stok item yang akan diedit
 		query := "SELECT itemStock FROM item WHERE itemId='" + itemIds[i] + "'"
@@ -188,6 +193,15 @@ func InsertItemToTransaction(w http.ResponseWriter, r *http.Request) {
 			boolStock := reduceStock(itemIds[i], quantity)
 			if !boolStock {
 				sendErrorResponse(w, "Failed to Update Stock")
+			} else {
+				itemid, _ := strconv.Atoi(itemIds[i])
+
+				//Hapus produk kalau ada di cart
+				delFromCartSuccess := removeItemFromCart(cartid, itemid)
+
+				if !delFromCartSuccess {
+					sendErrorResponse(w, "Failed to remove item from cart")
+				}
 			}
 		}
 	}
@@ -208,15 +222,44 @@ func UpdateTransaction(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	transId := vars["transaction_id"]
 	progress := r.Form.Get("progress")
-	sqlStatement := "UPDATE transaction SET progress = ? WHERE transactionID =?"
 
-	_, errQuery := db.Exec(sqlStatement, progress, transId)
+	userID := getUserIdFromCookie(r)
+	transShopId := strconv.Itoa(getTransactionShop(transId))
+	isTransOwner := CheckShopAdmin(userID, transShopId)
 
-	if errQuery != nil {
-		sendErrorResponse(w, "Failed to update transaction")
+	if !isTransOwner {
+		sendUnauthorizedResponse(w)
 		return
 	} else {
-		sendSuccessResponse(w, "Transaction progress updated", nil)
+		sqlStatement := "UPDATE transaction SET progress = ? WHERE transactionID =?"
+
+		_, errQuery := db.Exec(sqlStatement, progress, transId)
+
+		if errQuery != nil {
+			sendErrorResponse(w, "Failed to update transaction")
+			return
+		} else {
+			sendSuccessResponse(w, "Transaction progress updated", nil)
+		}
+	}
+}
+
+func getTransactionShop(transId string) int {
+	db := connect()
+	defer db.Close()
+	query := "SELECT shopid FROM transaction "
+	query += "INNER JOIN transaction_detail ON transaction.transactionid = transaction_detail.transactionid "
+	query += "INNER JOIN item ON transaction_detail.itemid = item.itemid "
+	query += "WHERE transaction.transactionid = ?"
+	row := db.QueryRow(query, transId)
+	var shopid int
+	switch err := row.Scan(&shopid); err {
+	case sql.ErrNoRows:
+		return -1
+	case nil:
+		return shopid
+	default:
+		return -1
 	}
 }
 

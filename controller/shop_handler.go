@@ -26,12 +26,10 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	shopid := vars["shop_id"]
 	shopname := r.Form.Get("shop_name")
-	shopreputation := r.Form.Get("shop_reputation")
 	shopcategory := r.Form.Get("shop_category")
 	shopaddress := r.Form.Get("shop_address")
 	shoptelephone := r.Form.Get("shop_telephone")
 	shopemail := r.Form.Get("shop_email")
-	shopstatus := r.Form.Get("shop_status")
 
 	//Cek apakah penjual admin toko ini. Kalau bukan, unauthorized access
 	if !CheckShopAdmin(CurUserID, shopid) {
@@ -43,41 +41,29 @@ func UpdateShopProfile(w http.ResponseWriter, r *http.Request) {
 	if shopname != "" {
 		query += "shopname = '" + shopname + "'"
 	}
-	if shopreputation != "" {
-		if strings.Contains(query, "shopname") {
-			query += ", "
-		}
-		query += "shopreputation = " + shopreputation
-	}
 	if shopcategory != "" {
-		if strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
 		query += "shopcategory = '" + shopcategory + "'"
 	}
 	if shopaddress != "" {
-		if strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
 		query += "shopaddress = '" + shopaddress + "'"
 	}
 	if shoptelephone != "" {
-		if strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
 		query += "shoptelephone = '" + shoptelephone + "'"
 	}
 	if shopemail != "" {
-		if strings.Contains(query, "shopemail") || strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
+		if query[len(query)-1:] != " " {
 			query += ", "
 		}
 		query += "shopemail = '" + shopemail + "'"
-	}
-	if shopstatus != "" {
-		if strings.Contains(query, "shopstatus") || strings.Contains(query, "shopemail") || strings.Contains(query, "shoptelephone") || strings.Contains(query, "shopcategory") || strings.Contains(query, "shopreputation") || strings.Contains(query, "shopname") {
-			query += ", "
-		}
-		query += "shopstatus = " + shopstatus
 	}
 	query += " WHERE shopid = " + shopid
 	_, errQuery := db.Exec(query)
@@ -146,7 +132,6 @@ func GetShopProfile(w http.ResponseWriter, r *http.Request) {
 			if !shop.ShopBanStatus {
 				shopList = append(shopList, shop)
 			}
-
 		}
 	}
 	sendSuccessResponse(w, "Success", shopList)
@@ -225,39 +210,36 @@ func InsertShopAdmin(w http.ResponseWriter, r *http.Request) {
 	emailresult := ""
 	usertype := 0
 	query := "SELECT userid,email,usertype FROM users WHERE email = '" + email + "'"
-	rows, err := db.Query(query)
-	if err != nil {
-		sendErrorResponse(w, "User with this email doesn't exists!")
+	rows := db.QueryRow(query)
+	switch err := rows.Scan(&userid, &emailresult, &usertype); err {
+	case sql.ErrNoRows:
+		sendErrorResponse(w, "User with this email not found")
 		return
-	} else {
-		for rows.Next() {
-			if err := rows.Scan(&userid, &emailresult, &usertype); err != nil {
-				log.Println(err)
-				sendErrorResponse(w, "Something went wrong, please try again")
-				return
+	case nil:
+		if usertype != 2 {
+			sendErrorResponse(w, "User with this email is not a seller!")
+			return
+		} else {
+			query2 := "INSERT INTO shop_admin(shopId, userId) VALUES (?,?)"
+			_, errQuery2 := db.Exec(query2, shopid, userid)
+			if errQuery2 != nil {
+				log.Println(errQuery2)
+				sendErrorResponse(w, "Failed to add shop admin")
 			} else {
-				if usertype != 2 {
-					sendErrorResponse(w, "User with this email is not a seller!")
+				var user model.User
+				errQuery := db.QueryRow("SELECT u.userid,u.name,u.email FROM shop_admin sa INNER JOIN users u ON sa.userId=u.userid WHERE sa.shopId=? AND u.userid=?", shopid, userid).Scan(&user.ID, &user.Name, &user.Email)
+				if errQuery != nil {
+					log.Println(errQuery)
+					sendErrorResponse(w, "Failed to register shop")
 				} else {
-					query2 := "INSERT INTO shop_admin(shopId, userId) VALUES (?,?)"
-					_, errQuery2 := db.Exec(query2, shopid, userid)
-					if errQuery2 != nil {
-						log.Println(errQuery2)
-						sendErrorResponse(w, "Failed to add shop admin")
-					} else {
-						var user model.User
-						errQuery := db.QueryRow("SELECT u.userid,u.name,u.email FROM shop_admin sa INNER JOIN users u ON sa.userId=u.userid WHERE sa.shopId=? AND u.userid=?", shopid, userid).Scan(&user.ID, &user.Name, &user.Email)
-						if errQuery != nil {
-							log.Println(errQuery)
-							sendErrorResponse(w, "Failed to register shop")
-						} else {
-							sendSuccessResponse(w, "Successfully added shop admin", nil)
-							sendMailInsertAdmin(user)
-						}
-					}
+					sendSuccessResponse(w, "Successfully added shop admin", nil)
+					sendMailInsertAdmin(user)
 				}
 			}
 		}
+	default:
+		log.Println(err)
+		sendErrorResponse(w, "Something went wrong, please try again")
 	}
 }
 func GetUserShop(w http.ResponseWriter, r *http.Request) {

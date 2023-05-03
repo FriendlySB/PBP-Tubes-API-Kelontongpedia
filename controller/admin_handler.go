@@ -77,7 +77,7 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(users) > 1 {
 		for i := 0; i < len(users); i++ {
-			go BanAdminShop(w, users[i])
+			go BanAdminShop(users[i])
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -92,23 +92,25 @@ func BanShop(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			panic(err.Error())
 		}
+		//Setelah toko berhasil diban, semua produk toko yang ada dicart akan dihapus
+		itemList := getShopItem(shopId)
+		for i := 0; i < len(itemList); i++ {
+			removeBannedItemFromCart(itemList[i])
+		}
 		sendSuccessResponse(w, "The shop has been banned", nil)
 		sendMailBanShop(shop)
 	}
 }
 
-func BanAdminShop(w http.ResponseWriter, user model.User) {
+func BanAdminShop(user model.User) {
 	db := connect()
 	defer db.Close()
-	sqlStatement := "UPDATE users SET banstatus = 1 WHERE userid =?"
+	sqlStatement := "UPDATE users SET banstatus = 1 WHERE userid = ?"
 	_, errQuery := db.Exec(sqlStatement, user.ID)
 	if errQuery != nil {
 		log.Println(errQuery)
-		sendErrorResponse(w, "Failed to ban user")
 		return
 	} else {
-		res := user.Name + " is Banned"
-		sendSuccessResponse(w, res, nil)
 		sendMailBanUser(user)
 	}
 }

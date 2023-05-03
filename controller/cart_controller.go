@@ -46,7 +46,13 @@ func GetCart(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	cart.CartDetail = cartDetails
-	sendSuccessResponse(w, "Success", cart)
+
+	if len(cartDetails) == 0 {
+		sendSuccessResponse(w, "Success", nil)
+	} else {
+		sendSuccessResponse(w, "Success", cart)
+	}
+
 }
 
 // insert item ke cart... asumsi insert itemnya itu item yang tidak ada di cart,
@@ -65,9 +71,10 @@ func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 	//ambil iduser dari cookie
 	UserID := getUserIdFromCookie(r)
 	//dapatkan cartID dari database menggunakan fungsi
-	cartid := getCartIDFromDatabase(w, UserID)
+	cartid := getCartIDFromDatabase(UserID)
 	// kalau cartID nya itu -1, berarti ada yang eror sehingga langsung return saja
 	if cartid == -1 {
+		sendErrorResponse(w, "Error fetching user cart id")
 		return
 	}
 	qtyInCart := checkItemInCart(cartid, itemId)
@@ -155,9 +162,10 @@ func UpdateCart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	//dapatkan cartID dari database menggunakan fungsi
-	cartid := getCartIDFromDatabase(w, UserID)
+	cartid := getCartIDFromDatabase(UserID)
 	// kalau cartID nya itu -1, berarti ada yang eror sehingga langsung return saja
 	if cartid == -1 {
+		sendErrorResponse(w, "Error fetching user cart id")
 		return
 	}
 	_, errQuery := db.Exec("UPDATE cart_detail SET quantity = ? WHERE cartId=? AND itemId=?",
@@ -188,25 +196,24 @@ func DeleteItemFromCart(w http.ResponseWriter, r *http.Request) {
 	UserID := getUserIdFromCookie(r)
 
 	//dapatkan cartID dari database menggunakan fungsi
-	cartid := getCartIDFromDatabase(w, UserID)
+	cartid := getCartIDFromDatabase(UserID)
 	// kalau cartID nya itu -1, berarti ada yang eror sehingga langsung return saja
 	if cartid == -1 {
+		sendErrorResponse(w, "Error fetching user cart id")
 		return
 	}
 	//hapus dari tabel cart_detail yang memiliki cartId ... dan itemId ...
-	_, errQuery := db.Exec("DELETE FROM cart_detail WHERE cartId=? AND itemId=?",
-		cartid,
-		itemId,
-	)
-	if errQuery == nil {
+	id, _ := strconv.Atoi(itemId)
+	delSuccess := removeItemFromCart(cartid, id)
+
+	if delSuccess {
 		sendSuccessResponse(w, "Product successfully removed from cart", nil)
 	} else {
-		log.Println(errQuery)
 		sendErrorResponse(w, "Failed to remove product from cart")
 	}
 
 }
-func getCartIDFromDatabase(w http.ResponseWriter, userID int) int {
+func getCartIDFromDatabase(userID int) int {
 	db := connect()
 	defer db.Close()
 
@@ -215,12 +222,30 @@ func getCartIDFromDatabase(w http.ResponseWriter, userID int) int {
 	var cartId int
 	switch err := row.Scan(&cartId); err {
 	case sql.ErrNoRows:
-		sendErrorResponse(w, "The user does not have a cart")
 		return -1
 	case nil:
-		return userID
+		return cartId
 	default:
-		sendErrorResponse(w, "There was an error while checking the cartId.")
 		return -1
 	}
+}
+
+func removeItemFromCart(cartid int, itemId int) bool {
+	db := connect()
+	defer db.Close()
+	_, errQuery := db.Exec("DELETE FROM cart_detail WHERE cartId=? AND itemId=?",
+		cartid,
+		itemId,
+	)
+	if errQuery == nil {
+		return true
+	} else {
+		return false
+	}
+}
+
+func removeBannedItemFromCart(itemid int) {
+	db := connect()
+	defer db.Close()
+	db.Exec("DELETE FROM cart_detail WHERE itemId=?", itemid)
 }

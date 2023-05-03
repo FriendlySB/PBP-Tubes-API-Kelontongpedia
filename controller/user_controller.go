@@ -249,7 +249,30 @@ func UpdateUserProfile(w http.ResponseWriter, r *http.Request) {
 	address := r.Form.Get("address")
 	telpNo := r.Form.Get("telpNo")
 
-	_, errQuery := db.Exec("UPDATE users SET name=?, email=?, address=?, telpNo=? WHERE userid=?", name, email, address, telpNo, currentID)
+	query := "UPDATE users SET "
+	if name != "" {
+		query += "name = '" + name + "'"
+	}
+	if email != "" {
+		if query[len(query)-1:] != " " {
+			query += ", "
+		}
+		query += "email = '" + email + "'"
+	}
+	if address != "" {
+		if query[len(query)-1:] != " " {
+			query += ", "
+		}
+		query += "address = '" + address + "'"
+	}
+	if telpNo != "" {
+		if query[len(query)-1:] != " " {
+			query += ", "
+		}
+		query += "telpNo = '" + telpNo + "'"
+	}
+	query += " WHERE userid= " + strconv.Itoa(currentID)
+	_, errQuery := db.Exec(query)
 
 	if errQuery == nil {
 		rows, err := db.Query("SELECT userid, name, email, address, telpNo,usertype FROM users WHERE userid = ?", currentID)
