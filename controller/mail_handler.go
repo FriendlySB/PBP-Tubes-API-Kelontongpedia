@@ -22,7 +22,7 @@ func sendMailRegis(user model.User) {
 	mail.SetHeader("Subject", "Notifications")
 	mail.SetBody("text/html", result)
 
-	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia2023@gmail.com", "vdfsiejrvbjrpnyg")
+	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia2023@gmail.com", "xhdfxoyciurbfizb")
 
 	if err := sender.DialAndSend(mail); err != nil {
 		fmt.Println(err)

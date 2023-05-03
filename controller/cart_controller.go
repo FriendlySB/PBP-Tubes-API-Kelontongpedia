@@ -68,6 +68,11 @@ func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 	//baca dari request body
 	itemId, _ := strconv.Atoi(r.Form.Get("itemId"))
 	quantity, _ := strconv.Atoi(r.Form.Get("quantity"))
+
+	if quantity <= 0 {
+		sendErrorResponse(w, "Quantity cannot be less than or equal to zero")
+		return
+	}
 	//ambil iduser dari cookie
 	UserID := getUserIdFromCookie(r)
 	//dapatkan cartID dari database menggunakan fungsi
@@ -77,6 +82,28 @@ func InsertItemToCart(w http.ResponseWriter, r *http.Request) {
 		sendErrorResponse(w, "Error fetching user cart id")
 		return
 	}
+	//cek stok terlebih dahulu dengan query stok item yang akan ditambahkan
+	query := "SELECT itemStock FROM item WHERE itemId='" + strconv.Itoa(itemId) + "'"
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Println(err)
+		sendErrorResponse(w, "Something went wrong, please try again")
+		return
+	}
+	var dbstock int
+	for rows.Next() {
+		if err := rows.Scan(&dbstock); err != nil {
+			log.Println(err)
+			sendErrorResponse(w, "Error result scan")
+			return
+		}
+	}
+	//jika stok < quantity, maka akan direturn pesan eror
+	if dbstock < quantity {
+		sendErrorResponse(w, "Stock is not enough")
+		return
+	}
+
 	qtyInCart := checkItemInCart(cartid, itemId)
 	if qtyInCart == 0 {
 		_, errQuery := db.Exec("INSERT INTO cart_detail(cartId,itemId,quantity)values(?,?,?)",
