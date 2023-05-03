@@ -3,6 +3,7 @@ package controller
 import (
 	"PBP-Tubes-API-Tokopedia/model"
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -11,7 +12,10 @@ func sendErrorResponse(w http.ResponseWriter, message string) {
 	response.Status = 400
 	response.Message = message
 	w.Header().Set("Content=Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func sendUnauthorizedResponse(w http.ResponseWriter) {
@@ -19,7 +23,10 @@ func sendUnauthorizedResponse(w http.ResponseWriter) {
 	response.Status = 401
 	response.Message = "Unauthorized Access"
 	w.Header().Set("Content=Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Println(err)
+	}
 }
 
 func sendSuccessResponse(w http.ResponseWriter, message string, value interface{}) {
@@ -29,5 +36,8 @@ func sendSuccessResponse(w http.ResponseWriter, message string, value interface{
 	response.Message = message
 	response.Data = value
 	w.Header().Set("Content=Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	err := json.NewEncoder(w).Encode(response)
+	if err != nil {
+		log.Println(err)
+	}
 }
