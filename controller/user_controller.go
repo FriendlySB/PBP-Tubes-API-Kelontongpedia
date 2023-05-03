@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -191,37 +192,41 @@ func GetUser(w http.ResponseWriter, r *http.Request) {
 	name := r.URL.Query().Get("name")
 	userid := r.URL.Query().Get("userid")
 
-	if userid != "" {
-		query := "SELECT userid, name, email, address, telpNo,usertype FROM users"
-		if name != "" {
-			query += " WHERE name='" + name + "'"
-		}
-		if userid != "" {
-			query += " WHERE userid=" + userid
-		}
+	query := "SELECT userid, name, email, address, telpNo,usertype FROM users "
 
-		rows, err := db.Query(query)
-		if err != nil {
-			log.Fatal(err)
-			sendErrorResponse(w, "Error")
+	if userid != "" {
+		query += " WHERE userid = " + userid + " "
+	}
+	if name != "" {
+		if strings.Contains(query, "WHERE") {
+			query += "AND"
 		} else {
-			var user model.User
-			var users []model.User
-			for rows.Next() {
-				if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo, &user.UserType); err != nil {
-					sendErrorResponse(w, "Error while scanning rows")
-					return
-				} else {
-					users = append(users, user)
-				}
-			}
-			if err == nil {
-				sendSuccessResponse(w, "Success", users)
+			query += "WHERE"
+		}
+		query += " name LIKE '%" + name + "%' "
+	}
+	rows, err := db.Query(query)
+	if err != nil {
+		log.Fatal(err)
+		sendErrorResponse(w, "Error")
+	} else {
+		var user model.User
+		var users []model.User
+		for rows.Next() {
+			if err := rows.Scan(&user.ID, &user.Name, &user.Email, &user.Address, &user.TelephoneNo, &user.UserType); err != nil {
+				sendErrorResponse(w, "Error while scanning rows")
+				return
 			} else {
-				sendErrorResponse(w, "Error")
+				users = append(users, user)
 			}
+		}
+		if err == nil {
+			sendSuccessResponse(w, "Success", users)
+		} else {
+			sendErrorResponse(w, "Error")
 		}
 	}
+
 }
 
 func GetUserProfile(w http.ResponseWriter, r *http.Request) {

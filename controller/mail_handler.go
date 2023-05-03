@@ -31,27 +31,6 @@ func sendMailRegis(user model.User) {
 	}
 }
 
-// func sendMailLogin(user model.User) {
-// 	mail := gm.NewMessage()
-
-// 	template := "bin/template/mailLogin.html"
-
-// 	result, _ := parseTemplate(template, user)
-
-// 	mail.SetHeader("From", "kelontongpedia2023@gmail.com")
-// 	mail.SetHeader("To", user.Email)
-// 	mail.SetHeader("Subject", "Notifications")
-// 	mail.SetBody("text/html", result)
-
-// 	sender := gm.NewDialer("smtp.gmail.com", 25, "kelontongpedia2023@gmail.com", "vdfsiejrvbjrpnyg")
-
-// 	if err := sender.DialAndSend(mail); err != nil {
-// 		fmt.Println(err)
-// 	} else {
-// 		fmt.Println("Email sent to: ", user.Email)
-// 	}
-// }
-
 func sendMailBanUser(user model.User) {
 	mail := gm.NewMessage()
 
