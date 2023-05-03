@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-co-op/gocron"
+	cron "github.com/go-co-op/gocron"
 )
 
 func SetMonthlyReportScheduler() {
 	//Setiap tanggal 1 di tiap bulan jam 8 GMT+7, kirim report bulanan
-	scheduler := gocron.NewScheduler(time.UTC)
+	scheduler := cron.NewScheduler(time.UTC)
 	scheduler.Every(1).Month(1).At("01:00").Do(func() {
 		SendReport()
 	})
