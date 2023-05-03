@@ -58,6 +58,14 @@ func GetItem(w http.ResponseWriter, r *http.Request) {
 		}
 		query += " shopid = '" + shopid + "'"
 	}
+	if strings.Contains(query, "WHERE") {
+		query += "AND"
+	} else {
+		query += "WHERE"
+	}
+	//Cek agar toko yang diban tidak muncul produknya saat disearch
+	query += " shopid NOT IN ("
+	query += "SELECT shopid FROM shop WHERE shopstatus = 1)"
 	rows, err := db.Query(query)
 
 	if err != nil {
@@ -258,4 +266,30 @@ func CheckItemShop(itemid string) int {
 	default:
 		return -1
 	}
+}
+
+func getShopItem(shopid string) []int {
+	db := connect()
+	defer db.Close()
+
+	var itemlist []int
+
+	query := "SELECT itemid FROM item WHERE shopid = ?"
+	rows, err := db.Query(query, shopid)
+
+	if err != nil {
+		log.Println(err)
+		return itemlist
+	}
+
+	for rows.Next() {
+		var itemid int
+		if err := rows.Scan(&itemid); err != nil {
+			log.Println(err)
+			return itemlist
+		} else {
+			itemlist = append(itemlist, itemid)
+		}
+	}
+	return itemlist
 }

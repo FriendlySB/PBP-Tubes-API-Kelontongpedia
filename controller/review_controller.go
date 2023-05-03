@@ -34,9 +34,9 @@ func GetItemReview(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err == nil {
-		sendSuccessResponse(w, "Success", reviews)
+		sendSuccessResponse(w, "Success getting review", reviews)
 	} else {
-		sendErrorResponse(w, "Error")
+		sendErrorResponse(w, "Error getting review")
 	}
 
 }
@@ -78,9 +78,9 @@ func ReviewItem(w http.ResponseWriter, r *http.Request) {
 	_, errQuery := db.Exec("INSERT INTO review(itemID, userID, rating, review) VALUES(?,?,?,?)", itemId, currentID, rating, review)
 
 	if errQuery == nil {
-		sendSuccessResponse(w, "Success", nil)
+		sendSuccessResponse(w, "Review success", nil)
 	} else {
-		sendErrorResponse(w, "Insert failed")
+		sendErrorResponse(w, "Insert review failed")
 	}
 
 }
